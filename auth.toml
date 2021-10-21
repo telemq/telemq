@@ -1,0 +1,31 @@
+# if defined no anonymous clients are allowed
+[[credentials]]
+client_id = "ADMIN"
+username = "admin"
+password = "8ee1cb7bc9ab43894d0bbdad6ef11a9cb3f9aee853b095b26b4e126a5976f555" # pa$$word1 SHA-256
+
+[[credentials]]
+client_id = "DEVICE_1"
+username = "device_1"
+password = "8ee1cb7bc9ab43894d0bbdad6ef11a9cb3f9aee853b095b26b4e126a5976f555"
+
+[[credentials]]
+client_id = "DEVICE_2"
+username = "device_2"
+password = "8ee1cb7bc9ab43894d0bbdad6ef11a9cb3f9aee853b095b26b4e126a5976f555"
+
+# ip_whitelist = []
+
+# ip_blacklist = []
+
+[[topic_client_rules]]
+client_id = "ADMIN"
+topic_rules = [{access = "ReadWrite", topic = "#"}]
+
+[[topic_client_rules]]
+client_id = "DEVICE_1"
+topic_rules = [{access = "ReadWrite", topic = "device/#"}]
+
+[[topic_client_rules]]
+client_id = "DEVICE_2"
+topic_rules = [{access = "ReadWrite", topic = "device/#"}]

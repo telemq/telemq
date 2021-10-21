@@ -1,0 +1,21 @@
+Server
+
+openssl req -new -x509 -days 365 -extensions v3_ca -keyout ./local-cert/ca.key -out ./local-cert/ca.crt
+
+openssl genrsa -des3 -out ./local-cert/server.key 2048
+
+openssl genrsa -out ./local-cert/server.key 2048
+
+openssl req -out ./local-cert/server.csr -key ./local-cert/server.key -new
+
+openssl x509 -req -in ./local-cert/server.csr -CA ./local-cert/ca.crt -CAkey ./local-cert/ca.key -CAcreateserial -out ./local-cert/server.crt -days 365
+
+Client
+
+openssl genrsa -des3 -out ./local-cert/client.key 2048
+
+openssl req -out ./local-cert/client.csr -key ./local-cert/client.key -new
+
+openssl x509 -req -in ./local-cert/client.csr -CA ./local-cert/ca.crt -CAkey ./local-cert/ca.key -CAcreateserial -out ./local-cert/client.crt -days 365
+
+password

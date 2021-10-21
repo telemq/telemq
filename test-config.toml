@@ -1,0 +1,15 @@
+# max_connections = 200
+# tcp_port = 1884
+log_level = "info"
+# log_dest="file:./logfile"
+broker_id = "one"
+anonymous_allowed = true
+keep_alive = 60
+activity_check_interval = 60
+auth_file = "./auth.toml"
+websockets_allowed = true
+web_port = 1880
+admin_api_port = 8080
+session_store_url = "http://localhost:8086"
+cert_file = "./local-cert/server.crt"
+key_file = "./local-cert/server.key"

@@ -1,0 +1,6 @@
+.vscode
+local-cert
+dev-configs
+target
+draft
+Cargo.lock
