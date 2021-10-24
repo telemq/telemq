@@ -4,3 +4,4 @@ dev-configs
 target
 draft
 Cargo.lock
+dist
