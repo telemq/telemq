@@ -1083,7 +1083,7 @@ impl Connection {
         }
       },
       None => {
-        return false;
+        return true;
       }
     }
   }

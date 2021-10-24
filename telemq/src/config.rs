@@ -72,6 +72,7 @@ impl TeleMQServerConfigSrc {
                     &config_src.auth_endpoint,
                 )
             })
+            .and_then(|_| Self::validate_state_store_url(&config_src.session_state_store_url))
             .and_then(|_| Self::validate_bridge_out(&config_src.bridge_out))
             .and_then(|_| Self::validate_broker_id(&config_src.broker_id))
     }
@@ -149,6 +150,21 @@ impl TeleMQServerConfigSrc {
         }
     }
 
+    fn validate_state_store_url(maybe_state_store_url: &OptString) -> ConfigResult<()> {
+        match maybe_state_store_url {
+            Some(state_store_url) => {
+                if state_store_url.to_socket_addrs().is_err() {
+                    return Err(TeleMQServerConfigError::WrongValue(
+                        "Cannot parse session_state_store_url into a socket address".into(),
+                    ));
+                }
+
+                return Ok(());
+            }
+            None => Ok(()),
+        }
+    }
+
     fn validate_broker_id(broker_id: &OptString) -> ConfigResult<()> {
         if broker_id.is_some() {
             return Ok(());
@@ -188,7 +204,7 @@ pub struct TeleMQServerConfig {
     pub auth_endpoint: OptSocketAddr,
     pub auth_file: OptString,
     pub sys_topics_update_interval: Duration,
-    pub session_state_store_url: String,
+    pub session_state_store_url: OptSocketAddr,
     pub bridge_in_addr: OptSocketAddr,
     pub bridge_out: OptList<BridgeOutConfig>,
     pub admin_api: OptSocketAddr,
@@ -253,9 +269,7 @@ impl From<TeleMQServerConfigSrc> for TeleMQServerConfig {
                 src.sys_topics_update_interval
                     .unwrap_or(Self::DEFAULT_SYS_TOPICS_UPDATE_INTERVAL),
             ),
-            session_state_store_url: src
-                .session_state_store_url
-                .unwrap_or(Self::DEFAULT_SESSION_STATE_STORE_URL.to_string()),
+            session_state_store_url: src.session_state_store_url.map(|url| url.parse().unwrap()),
             bridge_in_addr: src
                 .bridge_in_port
                 .map(|bridge_in_port| local_listener(bridge_in_port)),
@@ -301,7 +315,7 @@ impl Default for TeleMQServerConfig {
             sys_topics_update_interval: Duration::from_secs(
                 Self::DEFAULT_SYS_TOPICS_UPDATE_INTERVAL,
             ),
-            session_state_store_url: Self::DEFAULT_SESSION_STATE_STORE_URL.to_string(),
+            session_state_store_url: None,
             bridge_in_addr: None,
             bridge_out: None,
             admin_api: None,
@@ -322,7 +336,6 @@ impl TeleMQServerConfig {
     pub const DEFAULT_LOG_LEVEL: &'static str = "info";
     pub const DEFAULT_ANONYMOUS_ALLOWED: bool = true;
     pub const DEFAULT_SYS_TOPICS_UPDATE_INTERVAL: u64 = 30;
-    pub const DEFAULT_SESSION_STATE_STORE_URL: &'static str = "http://localhost:8086";
 
     pub fn from_file<P: AsRef<Path>>(path: P) -> ConfigResult<Self> {
         TeleMQServerConfigSrc::from_file(path).map(From::from)
