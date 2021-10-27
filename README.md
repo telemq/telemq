@@ -5,7 +5,9 @@ TeleMQ is an experimental MQTT broker implemented in Rust language. The broker i
 ## Content
 
 - [Build from source code](#build-from-the-source-code)
+- [Run TeleMQ](#run-telemq)
 - [Run in Docker](#run-in-docker)
+- [$SYS Topics](#sys-topics)
 - [License](#license)
 
 ## Build from the source code
