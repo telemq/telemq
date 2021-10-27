@@ -4,20 +4,29 @@ use crate::{
 };
 use log::{error, info};
 use mqtt_packets::v_3_1_1::ControlPacketCodec;
-use std::{net::SocketAddr, sync::Arc, time};
+use std::{
+  net::SocketAddr,
+  sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+  },
+  time,
+};
 use tokio::{spawn, sync::RwLock};
-use warp::{self, filters::ws::WebSocket, Filter};
+use warp::{self, filters::ws::WebSocket, Filter, Reply};
 
 pub struct WebsocketListener;
 
 impl WebsocketListener {
   pub fn bind(
     addr: SocketAddr,
+    connections_number: Arc<AtomicUsize>,
     authenticator: Arc<RwLock<Authenticator>>,
     control_sender: ControlSender,
     stats_sender: StatsSender,
     inactivity_interval: time::Duration,
     state_store: Arc<RwLock<SessionStateStore>>,
+    max_connections: usize,
   ) {
     spawn(async move {
       let routes = warp::ws()
@@ -28,10 +37,27 @@ impl WebsocketListener {
           stats_sender,
           inactivity_interval,
           state_store,
+          connections_number,
+          max_connections,
         )))
         .map(
           |ws: warp::ws::Ws, addr: Option<SocketAddr>, telemq: TeleMQParams| {
             let addr = addr.unwrap().clone();
+            if telemq
+              .connections_number
+              .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |prev_value| {
+                if prev_value >= telemq.max_connections {
+                  None
+                } else {
+                  Some(prev_value + 1)
+                }
+              })
+              .is_err()
+            {
+              return warp::http::StatusCode::from_u16(560)
+                .unwrap()
+                .into_response();
+            }
             // And then our closure will be called when it completes...
             ws.on_upgrade(move |websocket| async move {
               peer_process(
@@ -44,7 +70,9 @@ impl WebsocketListener {
                 telemq.state_store,
               )
               .await;
+              telemq.connections_number.fetch_sub(1, Ordering::Relaxed);
             })
+            .into_response()
           },
         )
         .map(|reply| warp::reply::with_header(reply, "Sec-WebSocket-Protocol", "mqtt"));
@@ -106,6 +134,8 @@ struct TeleMQParams {
   inactivity_interval: time::Duration,
   stats_sender: StatsSender,
   state_store: Arc<RwLock<SessionStateStore>>,
+  connections_number: Arc<AtomicUsize>,
+  max_connections: usize,
 }
 
 impl TeleMQParams {
@@ -115,6 +145,8 @@ impl TeleMQParams {
     stats_sender: StatsSender,
     inactivity_interval: time::Duration,
     state_store: Arc<RwLock<SessionStateStore>>,
+    connections_number: Arc<AtomicUsize>,
+    max_connections: usize,
   ) -> Self {
     TeleMQParams {
       authenticator,
@@ -122,6 +154,8 @@ impl TeleMQParams {
       inactivity_interval,
       stats_sender,
       state_store,
+      connections_number,
+      max_connections,
     }
   }
 }

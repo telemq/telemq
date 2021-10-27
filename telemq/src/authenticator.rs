@@ -38,7 +38,7 @@ impl From<&AccessType> for TopicAccess {
 #[derive(Debug)]
 pub struct ConnectResponse {
     pub connection_allowed: bool,
-    pub topics_acl: Vec<TopicACL>,
+    pub topics_acl: Option<Vec<TopicACL>>,
     pub max_packet_size: Option<usize>,
 }
 
@@ -77,43 +77,39 @@ impl Authenticator {
     ) -> AuthenticatorResult<ConnectResponse> {
         let connection_allowed = match self.auth_file {
             Some(ref auth_file) => auth_file.login(socket_addr, &client_id, username, password),
-            None => username.is_none() && password.is_none() && self.anonymous_allowed,
+            None => self.anonymous_allowed,
         };
 
         if !connection_allowed {
             return Ok(ConnectResponse {
                 connection_allowed: false,
-                topics_acl: vec![],
+                topics_acl: None,
                 max_packet_size: self.max_packet_size.clone(),
             });
         }
 
         Ok(ConnectResponse {
             connection_allowed: true,
-            topics_acl: self
-                .auth_file
-                .as_ref()
-                .map(|ref auth_file| {
-                    let client_rules = match auth_file.get_topics_acl(&client_id) {
-                        Some(r) => r,
-                        None => {
-                            return vec![];
-                        }
-                    };
-                    client_rules
-                        .topic_rules
-                        .iter()
-                        .map(|r| TopicACL {
-                            topic: r.topic.clone(),
-                            access: r
-                                .access
-                                .as_ref()
-                                .map(|x| TopicAccess::from(x))
-                                .unwrap_or_else(|| TopicAccess::ReadWrite),
-                        })
-                        .collect()
-                })
-                .unwrap_or_else(|| vec![]),
+            topics_acl: self.auth_file.as_ref().map(|ref auth_file| {
+                let client_rules = match auth_file.get_topics_acl(&client_id) {
+                    Some(r) => r,
+                    None => {
+                        return vec![];
+                    }
+                };
+                client_rules
+                    .topic_rules
+                    .iter()
+                    .map(|r| TopicACL {
+                        topic: r.topic.clone(),
+                        access: r
+                            .access
+                            .as_ref()
+                            .map(|x| TopicAccess::from(x))
+                            .unwrap_or_else(|| TopicAccess::ReadWrite),
+                    })
+                    .collect()
+            }),
             max_packet_size: self.max_packet_size.clone(),
         })
     }

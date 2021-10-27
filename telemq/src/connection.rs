@@ -1037,12 +1037,12 @@ impl Connection {
       Some(ref client_rules) => {
         let mut results: Vec<bool> = Vec::with_capacity(subscriptions.len());
         for sub in subscriptions {
-          match client_rules
-            .topics_acl
-            .iter()
-            .find(|r| topics_match(&sub.path, &r.topic.path))
-          {
-            Some(topic_rule) => match topic_rule.access {
+          match client_rules.topics_acl.as_ref().map(|topics| {
+            topics
+              .iter()
+              .find(|r| topics_match(&sub.path, &r.topic.path))
+          }) {
+            Some(Some(topic_rule)) => match topic_rule.access {
               TopicAccess::ReadWrite | TopicAccess::Read => {
                 results.push(true);
               }
@@ -1050,8 +1050,11 @@ impl Connection {
                 results.push(false);
               }
             },
-            None => {
+            Some(None) => {
               results.push(false);
+            }
+            None => {
+              results.push(true);
             }
           }
         }
@@ -1065,26 +1068,19 @@ impl Connection {
 
   fn check_publish(&self, topic: &Topic) -> bool {
     match self.acl {
-      Some(ref client_rules) => match client_rules
-        .topics_acl
-        .iter()
-        .find(|r| topics_match(&topic.path, &r.topic.path))
-      {
-        Some(topic_rule) => match topic_rule.access {
-          TopicAccess::ReadWrite | TopicAccess::Write => {
-            return true;
-          }
-          TopicAccess::Deny | TopicAccess::Read => {
-            return false;
-          }
+      Some(ref client_rules) => match client_rules.topics_acl.as_ref().map(|topics| {
+        topics
+          .iter()
+          .find(|r| topics_match(&topic.path, &r.topic.path))
+      }) {
+        Some(Some(topic_rule)) => match topic_rule.access {
+          TopicAccess::ReadWrite | TopicAccess::Write => true,
+          TopicAccess::Deny | TopicAccess::Read => false,
         },
-        None => {
-          return false;
-        }
+        Some(None) => false,
+        None => true,
       },
-      None => {
-        return true;
-      }
+      None => true,
     }
   }
 }

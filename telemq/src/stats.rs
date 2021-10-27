@@ -49,7 +49,7 @@ impl Stats {
             println!("Client Disconnected {:?}\n\n", client_id);
           }
           StatsMessage::PacketProcessed { client_id, bytes } => {
-            println!("Packet Processed {:?} {:?}\n\n", client_id, bytes);
+            // println!("Packet Processed {:?} {:?}\n\n", client_id, bytes);
           }
         }
       }

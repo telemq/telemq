@@ -1,4 +1,12 @@
-use std::{io, net::SocketAddr, sync::Arc, time};
+use std::{
+    io,
+    net::SocketAddr,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+    time,
+};
 
 use crate::{
     authenticator::Authenticator,
@@ -35,6 +43,7 @@ pub struct Server {
     authenticator: Arc<RwLock<Authenticator>>,
     state_store: Arc<RwLock<SessionStateStore>>,
     shut_down_channel: Receiver<()>,
+    connections_number: Arc<AtomicUsize>,
 }
 
 impl Server {
@@ -65,6 +74,7 @@ impl Server {
             authenticator,
             state_store,
             shut_down_channel: rx,
+            connections_number: Arc::new(AtomicUsize::new(0)),
         })
     }
 
@@ -87,11 +97,13 @@ impl Server {
         if let Some(web_addr) = self.config.web_addr {
             WebsocketListener::bind(
                 web_addr,
+                self.connections_number.clone(),
                 self.authenticator.clone(),
                 self.control_sender.clone(),
                 self.stats_sender.clone(),
                 self.config.keep_alive.clone(),
                 self.state_store.clone(),
+                self.config.max_connections,
             );
             println!("Websocket is listening on {:?}", web_addr);
         }
@@ -110,6 +122,18 @@ impl Server {
         loop {
             select! {
               Ok((stream, addr)) = tcp_listener.accept() => {
+                let connections_number = self.connections_number.clone();
+                if connections_number.fetch_update(
+                    Ordering::SeqCst,
+                    Ordering::SeqCst,
+                    |prev_value| if prev_value >= self.config.max_connections {
+                        None
+                    } else {
+                        Some(prev_value + 1)
+                    }
+                ).is_err() {
+                    continue;
+                }
                 let authenticator = self.authenticator.clone();
                 let control_sender = self.control_sender.clone();
                 let stats_sender = self.stats_sender.clone();
@@ -129,9 +153,22 @@ impl Server {
                     ).await {
                         error!("Could not add new TCP connection: {:?}: {:?}", addr, err);
                     }
+                    connections_number.fetch_sub(1, Ordering::Relaxed);
                 });
               }
               Ok((stream, addr)) = tls_listener.accept() => {
+                let connections_number = self.connections_number.clone();
+                if connections_number.fetch_update(
+                    Ordering::SeqCst,
+                    Ordering::SeqCst,
+                    |prev_value| if prev_value >= self.config.max_connections {
+                        None
+                    } else {
+                        Some(prev_value + 1)
+                    }
+                ).is_err() {
+                    continue;
+                }
                 let control_sender = self.control_sender.clone();
                 let stats_sender = self.stats_sender.clone();
                 let authenticator = self.authenticator.clone();
@@ -150,6 +187,7 @@ impl Server {
                     ).await {
                         error!("Could not add new TCP connection: {:?}: {:?}", addr, err);
                     }
+                    connections_number.fetch_sub(1, Ordering::SeqCst);
                 });
               }
               Some(signal) = signals.next() => {
