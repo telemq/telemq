@@ -28,8 +28,8 @@ pub struct TeleMQServerConfigSrc {
     pub tls_port: OptPort,
     pub cert_file: OptString,
     pub key_file: OptString,
-    pub websockets_allowed: OptBool,
-    pub web_port: OptPort,
+    pub ws_port: OptPort,
+    // TODO: not needed?
     pub activity_check_interval: OptDuration,
     pub backup_interval: OptDuration,
     pub keep_alive: OptDuration,
@@ -51,7 +51,7 @@ pub struct TeleMQServerConfigSrc {
 
 impl TeleMQServerConfigSrc {
     pub const LOG_DEST_STDOUT: &'static str = "stdout";
-    pub const LOG_DEST_STDERR: &'static str = "stdout";
+    pub const LOG_DEST_STDERR: &'static str = "stderr";
     pub const LOG_DEST_FILE_REGEX: &'static str = "^(file:)";
     pub const LOG_LEVEL: &'static [&'static str; 4] = &["error", "warn", "info", "debug"];
 
@@ -187,7 +187,7 @@ pub struct TeleMQServerConfig {
     pub cert_file: OptString,
     pub key_file: OptString,
     // Websocket listener
-    pub web_addr: OptSocketAddr,
+    pub ws_addr: OptSocketAddr,
     pub activity_check_interval: Duration,
     pub backup_interval: Duration,
     pub keep_alive: Duration,
@@ -228,16 +228,7 @@ impl From<TeleMQServerConfigSrc> for TeleMQServerConfig {
             },
             cert_file: src.cert_file,
             key_file: src.key_file,
-            web_addr: if src
-                .websockets_allowed
-                .unwrap_or(Self::DEFAULT_WEBSOCKETS_ALLOWED)
-            {
-                Some(local_listener(
-                    src.web_port.unwrap_or(Self::DEFAULT_TLS_PORT),
-                ))
-            } else {
-                None
-            },
+            ws_addr: src.ws_port.map(local_listener),
             activity_check_interval: Duration::from_secs(
                 src.activity_check_interval
                     .unwrap_or(Self::DEFAULT_ACTIVITY_CHECK_INTERVAL),
@@ -297,7 +288,7 @@ impl Default for TeleMQServerConfig {
             tls_addr: None,
             cert_file: None,
             key_file: None,
-            web_addr: None,
+            ws_addr: None,
             activity_check_interval: Duration::from_secs(Self::DEFAULT_ACTIVITY_CHECK_INTERVAL),
             backup_interval: Duration::from_secs(Self::DEFAULT_BACKUP_INTERVAL),
             keep_alive: Duration::from_secs(Self::DEFAULT_KEEP_ALIVE),
@@ -328,7 +319,6 @@ impl TeleMQServerConfig {
     pub const DEFAULT_MAX_CONNECTIONS: usize = 10_000;
     pub const DEFAULT_TCP_PORT: u16 = 1883;
     pub const DEFAULT_TLS_PORT: u16 = 8883;
-    pub const DEFAULT_WEBSOCKETS_ALLOWED: bool = false;
     pub const DEFAULT_ACTIVITY_CHECK_INTERVAL: u64 = 120;
     pub const DEFAULT_BACKUP_INTERVAL: u64 = 30;
     pub const DEFAULT_KEEP_ALIVE: u64 = 120;

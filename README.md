@@ -56,6 +56,14 @@ telemq
 
 TeleMQ being ran with a default config will open a plain TCP listener on `0.0.0.0:1883`, will allow to connect any client. And will allow those clients to subscribe and to publish to any topic name. Logs will be streamed to stdout, all logs starting from `INFO` level will be shown. Keep alive interval is **_120 secs_** - make sure your client sends at least one message (PUBLISH or PINGREQ) per this interval. Maximal number of connection is 10,000.
 
+To see all options, run
+
+```
+telemq --help
+```
+
+To override the default behaviour, one can use a TeleMQ config file. Information about a configuration options can be found in [`telemq_config.md`](./docs/telemq_config.md).
+
 ## Run in Docker
 
 TeleMQ Docker image is to be created.

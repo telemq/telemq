@@ -1,5 +1,6 @@
 max_connections = 2
 # tcp_port = 1884
+tls_port = 1886
 log_level = "info"
 # log_dest="file:./logfile"
 broker_id = "one"

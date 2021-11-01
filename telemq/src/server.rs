@@ -94,7 +94,7 @@ impl Server {
             println!("TLS Listener is listening on {:?}", tls_addr);
         }
 
-        if let Some(web_addr) = self.config.web_addr {
+        if let Some(web_addr) = self.config.ws_addr {
             WebsocketListener::bind(
                 web_addr,
                 self.connections_number.clone(),
