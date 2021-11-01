@@ -1,3 +1,5 @@
+# TeleMQ authentication and authorization TOML file
+
 Auth file is a TOML file which defines which topics are allowed to publish and/or subscribe both for anonymous (make sure the config file allows anonymous connections) and non-anonymous clients.
 
 It provides a list of credentials for non-anonymous clients so that TeleMQ will check credentials provided by a client in a CONNECT packet against this list. Passwords should be provided as SHA-256 hash of an original passwords which will provided in CONNECT packets.

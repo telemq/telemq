@@ -1,3 +1,5 @@
+# TeleMQ configuration TOML file
+
 ### `broker_id`
 
 **`broker_id`** - a string which will be used as a broker ID. If not provided default value `<undefined>` will be used.
