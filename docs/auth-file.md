@@ -24,7 +24,7 @@ Example:
 
 ```toml
 topic_all_rules = [
-  {access = "Read", topic = "#"}
+  {access = "Read", topic = "#"},
   {access = "Write", topic = "some_topic"}
 ]
 
