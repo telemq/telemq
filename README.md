@@ -1,5 +1,7 @@
 # TeleMQ
 
+![TeleMQ - MQTT broker](./docs/telemq-logo-white.svg)
+
 TeleMQ is an experimental MQTT broker implemented in Rust language. The broker implements [MQTT version 3.1.1](https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html) specification.
 
 ## Content
