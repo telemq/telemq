@@ -15,7 +15,7 @@ build_telemq_broker:
 
 copy_to_linode_storage:
   before_script:
-    - scripts/ci/configure-cli.sh
+    - scripts/ci/configure_cli.sh
   stage: deploy
   script:
     - echo "Mock for copying to the linode storage"
