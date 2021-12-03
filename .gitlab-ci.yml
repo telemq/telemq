@@ -1,0 +1,27 @@
+stages:
+  - build
+  - deploy
+
+default:
+  image: rust:1.56
+
+build_telemq_broker:
+  stage: build
+  script:
+    - cargo build --release
+  artifacts:
+    paths:
+      - target/release
+
+copy_to_linode_storage:
+  before_script:
+    - ./scripts/ci/configure.sh
+  stage: deploy
+  script:
+    - echo "Mock for copying to the linode storage"
+
+start_test_instance:
+  stage: deploy
+  needs: [copy_to_linode_storage]
+  script:
+    - echo "Mock for starting a test instance with a new build"
