@@ -3,9 +3,10 @@ stages:
   - deploy
 
 default:
-  image: rust:1.56
+  image: python:3.10.0-buster
 
 build_telemq_broker:
+  image: rust:1.56
   stage: build
   script:
     - cargo build --release

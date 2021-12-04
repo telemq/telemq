@@ -1,6 +1,6 @@
 #!/bin/bash
-apt-get update
-apt-get -y install python3-venv python3-pip
+echo "PIP3 version $(pip3 --version)"
+
 pip3 install linode-cli --upgrade
 
 # write linode-cli config
