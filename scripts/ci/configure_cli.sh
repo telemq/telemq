@@ -4,6 +4,9 @@ echo "PIP3 version $(pip3 --version)"
 pip3 install linode-cli --upgrade
 
 # write linode-cli config
+mkdir -p ~/.config
+touch ~/.config/linode-cli
+
 cat << EOF >> ~/.config/linode-cli
 [DEFAULT]
 default-user = alexpikalov
