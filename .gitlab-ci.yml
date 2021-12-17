@@ -12,11 +12,13 @@ build_telemq_broker:
     - cargo build --release
   artifacts:
     paths:
-      - target/release
+      - target/release/telemq
+      - target/release/telemq.d
 
 copy_to_linode_storage:
   before_script:
     - scripts/ci/configure_cli.sh
+    - linode-cli obj upload
   stage: deploy
   script:
     - echo "Mock for copying to the linode storage"

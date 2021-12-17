@@ -2,6 +2,9 @@
 echo "PIP3 version $(pip3 --version)"
 
 pip3 install linode-cli --upgrade
+# install boto dependency for the obj CLI plugin
+# required to upload artifacts to Object Storage  
+pip3 install boto
 
 # write linode-cli config
 mkdir -p ~/.config
