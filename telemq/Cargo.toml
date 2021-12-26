@@ -27,7 +27,7 @@ ipnet = "^2.0.0"
 
 warp = "0.3"
 
-mqtt-packets = { path = "../mqtt-packets", features = ["v_3_1_1"] }
+mqtt-packets = { path = "../mqtt-packets", version = "0.1.0", features = ["v_3_1_1"] }
 
 [dev-dependencies]
 maplit = "1"
