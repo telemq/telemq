@@ -1,8 +1,6 @@
 mod message;
-mod metric_cmaxnum;
-mod metric_cnum;
-mod metric_trait;
 mod stats;
+mod stats_state;
 
 pub use message::StatsMessage;
-pub use stats::{Stats, StatsSender};
+pub use stats::{Stats, StatsConfig, StatsSender};

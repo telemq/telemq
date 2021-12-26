@@ -256,10 +256,16 @@ impl From<TeleMQServerConfigSrc> for TeleMQServerConfig {
             },
             auth_endpoint: src.auth_endpoint.map(|url| url.parse().unwrap()),
             auth_file: src.auth_file,
-            sys_topics_update_interval: Duration::from_secs(
-                src.sys_topics_update_interval
-                    .unwrap_or(Self::DEFAULT_SYS_TOPICS_UPDATE_INTERVAL),
-            ),
+            sys_topics_update_interval: src
+                .sys_topics_update_interval
+                .map(|secs| {
+                    if secs == 0 {
+                        Duration::ZERO
+                    } else {
+                        Duration::from_secs(secs)
+                    }
+                })
+                .unwrap_or_else(|| Duration::from_secs(Self::DEFAULT_SYS_TOPICS_UPDATE_INTERVAL)),
             session_state_store_url: src.session_state_store_url.map(|url| url.parse().unwrap()),
             bridge_in_addr: src
                 .bridge_in_port

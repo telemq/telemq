@@ -46,8 +46,8 @@ pub enum ControlMessage {
     subscriptions: Vec<Subscription>,
   },
   Publish {
-    addr: SocketAddr,
-    client_id: String,
+    addr: Option<SocketAddr>,
+    client_id: Option<String>,
     packet: ControlPacket,
   },
   ShutDown,

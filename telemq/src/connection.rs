@@ -112,7 +112,7 @@ macro_rules! send {
       Err::<(), ()>(())
     } else {
       send_stats!(
-        StatsMessage::new_packet_processed(id!($self), &$package),
+        StatsMessage::new_packet_processed_send(id!($self), &$package),
         $self
       );
 
@@ -411,7 +411,10 @@ impl Connection {
     // report stats
     if let Variable::Connect(ref variable) = control_packet.variable {
       send_stats!(
-        StatsMessage::new_packet_processed(variable.client_identifier.clone(), &control_packet,),
+        StatsMessage::new_packet_processed_received(
+          variable.client_identifier.clone(),
+          &control_packet,
+        ),
         self
       );
     }
@@ -585,6 +588,7 @@ impl Connection {
       send_stats!(
         StatsMessage::ClientConnected {
           addr: self.addr.clone(),
+          clean_session: self.state.has_clean_session(),
           client_id: id!(self)
         },
         self
@@ -671,7 +675,7 @@ impl Connection {
 
   async fn pingreq(&mut self, control_packet: ControlPacket) {
     send_stats!(
-      StatsMessage::new_packet_processed(id!(self), &control_packet,),
+      StatsMessage::new_packet_processed_received(id!(self), &control_packet,),
       self
     );
 
@@ -681,7 +685,7 @@ impl Connection {
 
   async fn subscribe(&mut self, control_packet: ControlPacket) {
     send_stats!(
-      StatsMessage::new_packet_processed(id!(self), &control_packet),
+      StatsMessage::new_packet_processed_received(id!(self), &control_packet),
       self
     );
 
@@ -761,7 +765,7 @@ impl Connection {
 
   async fn unsubscribe(&mut self, control_packet: ControlPacket) {
     send_stats!(
-      StatsMessage::new_packet_processed(id!(self), &control_packet),
+      StatsMessage::new_packet_processed_received(id!(self), &control_packet),
       self
     );
 
@@ -798,7 +802,7 @@ impl Connection {
 
   async fn publish(&mut self, control_packet: ControlPacket) {
     send_stats!(
-      StatsMessage::new_packet_processed(id!(self), &control_packet),
+      StatsMessage::new_packet_processed_received(id!(self), &control_packet),
       self
     );
 
@@ -826,9 +830,9 @@ impl Connection {
 
     send_control!(
       ControlMessage::Publish {
-        addr: self.addr.clone(),
+        addr: Some(self.addr.clone()),
         packet: control_packet.clone(),
-        client_id: id!(self)
+        client_id: Some(id!(self))
       },
       self
     );
@@ -944,7 +948,7 @@ impl Connection {
 
   async fn puback(&mut self, control_packet: &ControlPacket) {
     send_stats!(
-      StatsMessage::new_packet_processed(id!(self), &control_packet),
+      StatsMessage::new_packet_processed_received(id!(self), &control_packet),
       self
     );
 
@@ -963,7 +967,7 @@ impl Connection {
 
   async fn pubcomp(&mut self, control_packet: &ControlPacket) {
     send_stats!(
-      StatsMessage::new_packet_processed(id!(self), &control_packet),
+      StatsMessage::new_packet_processed_received(id!(self), &control_packet),
       self
     );
 
@@ -982,7 +986,7 @@ impl Connection {
 
   async fn pubrec(&mut self, control_packet: &ControlPacket) {
     send_stats!(
-      StatsMessage::new_packet_processed(id!(self), &control_packet),
+      StatsMessage::new_packet_processed_received(id!(self), &control_packet),
       self
     );
 
@@ -1004,7 +1008,7 @@ impl Connection {
 
   async fn pubrel(&mut self, control_packet: &ControlPacket) {
     send_stats!(
-      StatsMessage::new_packet_processed(id!(self), &control_packet),
+      StatsMessage::new_packet_processed_received(id!(self), &control_packet),
       self
     );
 

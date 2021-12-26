@@ -15,7 +15,7 @@ use crate::{
     control::{Control, ControlMessage, ControlSender},
     server_error::ServerResult,
     session_state_store::SessionStateStore,
-    stats::{Stats, StatsSender},
+    stats::{Stats, StatsConfig, StatsSender},
     tls_listener::TlsListener,
     websocket_listener::WebsocketListener,
 };
@@ -58,7 +58,10 @@ impl Server {
             }
         });
 
-        let (stats, stats_sender) = Stats::new();
+        let (stats, stats_sender) = Stats::new(StatsConfig {
+            update_interval: config.sys_topics_update_interval,
+            control_sender: control_sender.clone(),
+        });
         spawn(async move {
             if let Err(err) = stats.run().await {
                 error!("[Stats Worker]: finished with error {:?}", err);
