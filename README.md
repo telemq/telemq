@@ -72,7 +72,14 @@ TeleMQ Docker image is to be created.
 
 ## $SYS topics
 
-$SYS topics are to be implemented.
+$SYS topics are the special topics which a broker itself uses to publish to all subscribers system information about itself.
+
+- `$SYS/broker/bytes/received` - contains an information about a number of bytes a broker received from producers since the broker is running.
+- `$SYS/broker/bytes/sent` - contains an information about a number of bytes a broker sent to consumers since the broker is running.
+- `$SYS/broker/messages/received` - contains an information about a number of messages a broker received from producers since the broker is running.
+- `$SYS/broker/messages/sent` - contains an information about a number of messages a broker sent to consumers since the broker is running.
+- `$SYS/broker/clients/connected` - contains an information about a number of clients currently connected to the broker.
+- `$SYS/broker/clients/maximum` - contains an information about a maximal number of clients ever being connected simultaneously to the broker.
 
 ## License
 

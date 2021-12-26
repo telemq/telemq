@@ -53,9 +53,9 @@ struct StatsStateInner {
 
 impl StatsStateInner {
   const BROKER_BYTES_RECEIVED_NAME: &'static str = "broker/bytes/received";
-  const BROKER_BYTES_SENT_NAME: &'static str = "broker/bytes/received";
+  const BROKER_BYTES_SENT_NAME: &'static str = "broker/bytes/sent";
   const BROKER_MESSAGES_RECEIVED_NAME: &'static str = "broker/messages/received";
-  const BROKER_MESSAGES_SENT_NAME: &'static str = "broker/messages/received";
+  const BROKER_MESSAGES_SENT_NAME: &'static str = "broker/messages/sent";
   const BROKER_CLIENTS_CONNECTED: &'static str = "broker/clients/connected";
   const BROKER_CLIENTS_MAXIMUM: &'static str = "broker/clients/maximum";
 
