@@ -94,3 +94,13 @@ Example:
 ```toml
 auth_file = "./auth_file.toml"
 ```
+
+### `sys_topics_update_interval`
+
+**`sys_topics_update_interval`** is a time interval in seconds after which $SYS-topic messages are published by a broker. If `0` is provided, $SYS-topics are disabled. Default value - `30` (30 seconds).
+
+Example:
+
+```toml
+sys_topics_update_interval = 300
+```
