@@ -6,3 +6,4 @@
 /local-cert
 /scripts
 /target
+/sesssion_state_store.json

@@ -84,7 +84,7 @@ pub struct Control {
 }
 
 impl Control {
-  pub fn new(
+  pub async fn new(
     config: &TeleMQServerConfig,
     state_store: Arc<RwLock<SessionStateStore>>,
     shut_down_channel: Sender<()>,
@@ -94,7 +94,7 @@ impl Control {
       Control {
         receiver: rx,
         connections: HashMap::with_capacity(config.max_connections),
-        subscription_tree: SubscriptionTree::new(),
+        subscription_tree: SubscriptionTree::from_session_state_store(state_store.clone()).await,
         retained_messages: vec![],
         state_store,
         is_shutting_down: false,
@@ -232,6 +232,10 @@ impl Control {
     }
 
     let subscribers = self.subscription_tree.find_subscribers(&topic.path);
+    println!(
+      "SUB TREE {:?}.\nSubs {:?}",
+      self.subscription_tree, subscribers
+    );
 
     // allowed
     let mut futs = Vec::with_capacity(subscribers.len());
@@ -249,6 +253,10 @@ impl Control {
   }
 
   async fn on_shut_down(&mut self) {
+    if let Err(err) = self.state_store.read().await.commit().await {
+      error!("[Control Worker]: unable to commit State Store. {:?}", err);
+    }
+
     if self.connections.is_empty() {
       self.shut_down_channel.send(()).await.unwrap();
       return;
