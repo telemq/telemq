@@ -6,4 +6,4 @@ RUN cargo build -p telemq --target-dir dist --release
 
 FROM debian:buster-slim
 COPY --from=builder /usr/src/telemq/dist/release/telemq /usr/local/bin/telemq
-CMD ["telemq"]
+ENTRYPOINT ["telemq"]

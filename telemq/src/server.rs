@@ -47,11 +47,11 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new(config: TeleMQServerConfig) -> Option<Self> {
+    pub async fn new(config: TeleMQServerConfig) -> Option<Self> {
         let (tx, rx) = channel(1);
         let state_store = Arc::new(RwLock::new(SessionStateStore::new()));
 
-        let (control, control_sender) = Control::new(&config, state_store.clone(), tx);
+        let (control, control_sender) = Control::new(&config, state_store.clone(), tx).await;
         spawn(async move {
             if let Err(err) = control.run().await {
                 error!("[Control Worker]: finished with error {:?}", err);

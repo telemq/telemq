@@ -1,5 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+  collections::{HashMap, HashSet},
+  sync::Arc,
+};
+use tokio::sync::RwLock;
 
+use crate::session_state_store::SessionStateStore;
 use mqtt_packets::v_3_1_1::topic::{SINGLE_LEVEL_WILD_CARD, WILD_CARD};
 
 type PathStep = String;
@@ -9,8 +14,16 @@ type ClientID = String;
 pub struct SubscriptionTree(SubscriptionNode);
 
 impl SubscriptionTree {
-  pub fn new() -> Self {
-    SubscriptionTree(SubscriptionNode::new())
+  pub async fn from_session_state_store(state_store: Arc<RwLock<SessionStateStore>>) -> Self {
+    let mut tree = SubscriptionTree(SubscriptionNode::new());
+
+    for (_, v) in state_store.read().await.as_inner_data().await {
+      for s in v.subscriptions {
+        tree.add_subscriber(&s.1.path, v.client_id.clone());
+      }
+    }
+
+    tree
   }
 
   pub fn add_subscriber(&mut self, subscription: &[PathStep], connection: ClientID) {
@@ -151,6 +164,10 @@ mod tests {
   use maplit::hashmap;
   use mqtt_packets::v_3_1_1::topic::Subscription;
 
+  fn new_tree() -> SubscriptionTree {
+    SubscriptionTree(SubscriptionNode::new())
+  }
+
   fn make_addr(n: u16) -> ClientID {
     format!("client_{}", n)
   }
@@ -167,7 +184,7 @@ mod tests {
 
   #[test]
   fn add_subscriber() {
-    let mut tree = SubscriptionTree::new();
+    let mut tree = new_tree();
 
     // empty subscription
     {
@@ -290,7 +307,7 @@ mod tests {
 
     // add + match
     {
-      let mut tree = SubscriptionTree::new();
+      let mut tree = new_tree();
       let sub = vec![String::from("a"), String::from("b")];
 
       tree.add_subscriber(&sub, make_addr(3));
@@ -309,7 +326,7 @@ mod tests {
   fn remove_subscriber() {
     // + clean an entire tree
     {
-      let mut tree = SubscriptionTree::new();
+      let mut tree = new_tree();
       let sub = vec![String::from("a"), String::from("b")];
 
       tree.add_subscriber(&sub, make_addr(3));
@@ -319,7 +336,7 @@ mod tests {
 
     // + clean a sub-tree
     {
-      let mut tree = SubscriptionTree::new();
+      let mut tree = new_tree();
       let sub_1 = vec![String::from("a"), String::from("b")];
       let sub_2 = vec![String::from("a"), String::from("b"), String::from("c")];
 

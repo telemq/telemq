@@ -5,3 +5,5 @@ target
 draft
 Cargo.lock
 dist
+
+session_state_store.json

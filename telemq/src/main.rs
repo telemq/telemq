@@ -10,6 +10,7 @@ extern crate maplit;
 extern crate mqtt_packets;
 extern crate regex;
 extern crate serde;
+extern crate serde_json;
 extern crate signal_hook;
 extern crate signal_hook_tokio;
 extern crate tokio;
@@ -78,7 +79,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     init_logger(&config);
 
-    if let Some(server) = Server::new(config) {
+    if let Some(server) = Server::new(config).await {
         server.start().await?;
     };
 
