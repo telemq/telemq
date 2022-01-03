@@ -14,11 +14,6 @@ type ClientID = String;
 pub struct SubscriptionTree(SubscriptionNode);
 
 impl SubscriptionTree {
-  // #[allow(unused)]
-  // pub fn new() -> Self {
-  //   SubscriptionTree(SubscriptionNode::new())
-  // }
-
   pub async fn from_session_state_store(state_store: Arc<RwLock<SessionStateStore>>) -> Self {
     let mut tree = SubscriptionTree(SubscriptionNode::new());
 

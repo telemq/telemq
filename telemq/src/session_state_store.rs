@@ -18,7 +18,7 @@ type InnerData = HashMap<ClientId, SessionConnectedState>;
 #[derive(Debug)]
 pub struct SessionStateStore {
   /// We have locks per state, so two different states can be read/modified simultanously.
-  pub states: HashMap<ClientId, RwLock<SessionConnectedState>>,
+  states: HashMap<ClientId, RwLock<SessionConnectedState>>,
 }
 
 impl SessionStateStore {

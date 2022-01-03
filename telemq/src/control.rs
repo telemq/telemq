@@ -232,10 +232,6 @@ impl Control {
     }
 
     let subscribers = self.subscription_tree.find_subscribers(&topic.path);
-    println!(
-      "SUB TREE {:?}.\nSubs {:?}",
-      self.subscription_tree, subscribers
-    );
 
     // allowed
     let mut futs = Vec::with_capacity(subscribers.len());
