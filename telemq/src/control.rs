@@ -110,7 +110,7 @@ impl Control {
         Some(control_message) = self.receiver.recv() => {
           match control_message {
             ControlMessage::ClientConnected{sender, client_id, clean_session, ..} => {
-              self.on_add_connection(sender, client_id, clean_session);
+              self.on_add_connection(sender, client_id, clean_session).await;
             },
             ControlMessage::AddSubscriptions{subscriptions, client_id, .. } => {
               self.on_add_subscriptions(client_id, subscriptions).await;
@@ -133,7 +133,7 @@ impl Control {
     }
   }
 
-  fn on_add_connection(
+  async fn on_add_connection(
     &mut self,
     sender: ConnectionSender,
     client_id: String,
@@ -141,6 +141,7 @@ impl Control {
   ) {
     if clean_session {
       self.subscription_tree.disconnect_subscriber(&client_id);
+      let _ = self.state_store.write().await.take_state(&client_id).await;
     }
 
     if let Some(connected_client_sender) = self.connections.remove(&client_id) {
@@ -212,6 +213,9 @@ impl Control {
     self.connections.remove(&client_id);
 
     if self.connections.is_empty() && self.is_shutting_down {
+      if let Err(err) = self.state_store.read().await.commit().await {
+        error!("[Control Worker]: unable to commit State Store. {:?}", err);
+      }
       self.shut_down_channel.send(()).await.unwrap();
     }
   }
@@ -249,10 +253,6 @@ impl Control {
   }
 
   async fn on_shut_down(&mut self) {
-    if let Err(err) = self.state_store.read().await.commit().await {
-      error!("[Control Worker]: unable to commit State Store. {:?}", err);
-    }
-
     if self.connections.is_empty() {
       self.shut_down_channel.send(()).await.unwrap();
       return;

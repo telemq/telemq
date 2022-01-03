@@ -1,4 +1,4 @@
-max_connections = 2
+max_connections = 10
 # tcp_port = 1884
 tls_port = 1886
 log_level = "info"
@@ -9,8 +9,9 @@ keep_alive = 60
 activity_check_interval = 60
 # auth_file = "./auth.toml"
 websockets_allowed = true
-web_port = 1880
+ws_port = 1880
 admin_api_port = 8080
+sys_topics_update_interval = 20
 # session_store_url = "http://localhost:8086"
 # cert_file = "./local-cert/server.crt"
 # key_file = "./local-cert/server.key"

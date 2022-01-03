@@ -650,17 +650,19 @@ impl Connection {
   async fn shut_down(&mut self) {
     if let Ok(connected_state) = self.state.into_closed() {
       let client_id = connected_state.client_id.clone();
-      if let Err(err) = self
-        .state_store
-        .write()
-        .await
-        .save_state(connected_state)
-        .await
-      {
-        error!(
-          "[Connection Worker@{:?}]: Unable save state in a State Store. {:?}",
-          self.addr, err
-        );
+      if !connected_state.clean_session {
+        if let Err(err) = self
+          .state_store
+          .write()
+          .await
+          .save_state(connected_state)
+          .await
+        {
+          error!(
+            "[Connection Worker@{:?}]: Unable save state in a State Store. {:?}",
+            self.addr, err
+          );
+        }
       }
 
       let disconnect_message = ControlMessage::ClientDisconnected {

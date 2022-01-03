@@ -75,7 +75,7 @@ Log levels:
 
 _To Be Defined_
 
-### `anonymous_allowed`s
+### `anonymous_allowed`
 
 **`anonymous_allowed`** - a boolean value which defines if an anonymous clients (the ones which don't provide neither `username` nor `password` in a `CONNECT` control packet) are allowed by a TeleMQ server. Default value - `true`. <u>Important:</u> if `false` is provided then one should provide `auth_file` (a path to an [authentication file TOML file](./auth-file.md)).
 

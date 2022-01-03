@@ -1,15 +1,15 @@
 use super::{
   message::StatsMessage,
-  stats_state::{StatsState, StatsStateDiffItem},
+  stats_state::{StatsState, StatsStateView},
 };
 use crate::control::{ControlMessage, ControlSender};
-use log::error;
+use log::{error, info};
 use mqtt_packets::v_3_1_1::{builders::PublishPacketBuilder, topic::Topic, ControlPacket};
 use std::{io, time::Duration};
 use tokio::{
   select,
   sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
-  time::sleep,
+  time::interval,
 };
 
 pub type StatsSender = UnboundedSender<StatsMessage>;
@@ -44,17 +44,19 @@ impl Stats {
 
   pub async fn run(mut self) -> io::Result<()> {
     if self.update_interval.is_zero() {
+      info!("[Stats Worker]: update interval is zero. Ingore incomming messages");
       loop {
         // do nothing with a message
         self.receiver.recv().await;
       }
     } else {
+      let mut interval_stream = interval(self.update_interval);
       loop {
         select! {
           Some(stats_message) = self.receiver.recv() => {
             self.state.update(stats_message);
           },
-          _ = sleep(self.update_interval) => {
+          _ = interval_stream.tick() => {
             let diffs = self.state.checkpoint();
             for upd in diffs {
               let packet = Self::build_publish_packet(upd);
@@ -72,10 +74,12 @@ impl Stats {
     }
   }
 
-  fn build_publish_packet(d: StatsStateDiffItem) -> ControlPacket {
+  fn build_publish_packet(d: StatsStateView) -> ControlPacket {
     let sys_topic = Topic::make_from_string(format!("$SYS/{}", d.0));
     let mut builder = PublishPacketBuilder::new();
-    builder.with_topic(sys_topic).with_payload(d.1);
+    builder
+      .with_topic(sys_topic)
+      .with_payload(d.1.as_bytes().to_vec());
 
     builder.build()
   }

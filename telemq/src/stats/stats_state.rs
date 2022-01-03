@@ -1,5 +1,4 @@
 use super::message::StatsMessage;
-use log::error;
 use std::collections::{HashMap, HashSet};
 
 /// Statistics state difference item, represented as a tuple
@@ -7,41 +6,26 @@ use std::collections::{HashMap, HashSet};
 /// which can be eventually transformed to a $SYS topic via `format!("$SYS/{}", path)`,
 /// `new_value` is a binary representation of a new value that can be used
 /// as a payload for a Publish control packet with a $SYS topic.
-pub type StatsStateDiffItem = (String, Vec<u8>);
+pub type StatsStateView = (String, String);
 
 pub struct StatsState {
   current: StatsStateInner,
-  prev: StatsStateInner,
-  is_pristine: bool,
 }
 
 impl StatsState {
   pub fn new() -> StatsState {
     StatsState {
-      is_pristine: true,
       current: StatsStateInner::new(),
-      prev: StatsStateInner::new(),
     }
   }
 
   pub fn update(&mut self, message: StatsMessage) {
-    self.is_pristine = false;
-
     self.current.update(message);
   }
 
-  /// Compares a current inner state with a previos checkpoint,
-  /// returns a difference and creates a new checkpoint.
-  pub fn checkpoint(&mut self) -> Vec<StatsStateDiffItem> {
-    if self.is_pristine {
-      return vec![];
-    }
-
-    let diff = self.prev.compare_with(&self.current);
-    self.prev = self.current.clone();
-    self.is_pristine = true;
-
-    diff
+  /// Returns a list of metrics views.
+  pub fn checkpoint(&mut self) -> Vec<StatsStateView> {
+    self.current.get_metrics()
   }
 }
 
@@ -92,24 +76,14 @@ impl StatsStateInner {
     }
   }
 
-  fn compare_with(&self, other_state: &StatsStateInner) -> Vec<StatsStateDiffItem> {
-    let mut diff = vec![];
+  fn get_metrics(&self) -> Vec<StatsStateView> {
+    let mut metrics = vec![];
 
-    for (k, v) in &other_state.metrics {
-      match self.metrics.get(k) {
-        Some(self_value) => {
-          if v != self_value {
-            diff.push((k.to_string(), v.to_be_bytes().to_vec()));
-          }
-        }
-        None => {
-          error!("BUG: Two StatsStatesInner should have the same metrics registered. \"{}\" not found in previous checkpoint", k);
-          diff.push((k.to_string(), v.to_be_bytes().to_vec()));
-        }
-      }
+    for (k, v) in &self.metrics {
+      metrics.push((k.to_string(), format!("{}", v)));
     }
 
-    diff
+    metrics
   }
 
   fn on_client_connected(&mut self, client_id: String) {

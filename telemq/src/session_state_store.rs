@@ -2,7 +2,14 @@ use crate::session_state::SessionConnectedState;
 use log::{error, info};
 use mqtt_packets::v_3_1_1::ControlPacket;
 use serde_json::{from_reader, to_vec};
-use std::{collections::HashMap, fmt::Debug, fs::File, io, io::Write, path::Path};
+use std::{
+  collections::HashMap,
+  fmt::Debug,
+  fs::{File, OpenOptions},
+  io,
+  io::Write,
+  path::Path,
+};
 use tokio::sync::RwLock;
 
 type ClientId = String;
@@ -83,7 +90,11 @@ impl SessionStateStore {
   }
 
   pub async fn commit(&self) -> io::Result<()> {
-    let mut new_inner_data = File::open(Self::DATA_FILE_PATH)?;
+    let mut new_inner_data = OpenOptions::new()
+      .append(false)
+      .write(true)
+      .create(true)
+      .open(Self::DATA_FILE_PATH)?;
     let _ = new_inner_data.set_len(0);
     new_inner_data.write_all(&to_vec(&self.as_inner_data().await).map_err(|_| {
       io::Error::new(
