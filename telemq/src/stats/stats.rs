@@ -57,9 +57,9 @@ impl Stats {
             self.state.update(stats_message);
           },
           _ = interval_stream.tick() => {
-            let diffs = self.state.checkpoint();
-            for upd in diffs {
-              let packet = Self::build_publish_packet(upd);
+            let metrics = self.state.checkpoint();
+            for mtr in metrics {
+              let packet = Self::build_publish_packet(mtr);
               if let Err(err) = self.control_sender.send(ControlMessage::Publish{
                 addr: None,
                 client_id: None,
