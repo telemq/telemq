@@ -68,7 +68,19 @@ To override the default behaviour, one can use a TeleMQ config file. Information
 
 ## Run in Docker
 
-TeleMQ Docker image is to be created.
+The basic run:
+
+```bash
+docker run -it -p 1883:1883 alexpikalov/telemq
+```
+
+With a custom config:
+
+```bash
+docker run -it -p 1883:1883 -v docker_volume_with_config alexpikalov/telemq --config=/path/to/config.toml
+```
+
+For the second option a respective volume with a [config TOML](./docs/telemq_config.md) file should be created.
 
 ## $SYS topics
 
