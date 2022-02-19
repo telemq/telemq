@@ -1,28 +1,15 @@
 use log::info;
-use mqtt_packets::v_3_1_1::topic::Topic;
-use serde::Deserialize;
 use std::net::SocketAddr;
 
-use crate::{
-    authenticator_error::AuthenticatorInitResult, authenticator_file::AuthenticatorFile,
-    config::TeleMQServerConfig,
+use super::{
+    authenticator_error::{AuthenticatorInitResult, AuthenticatorResult},
+    authenticator_file::AuthenticatorFile,
+    authenticator_server_client::connect as server_connect,
+    authenticator_types::{LoginRequest, LoginResponse, TopicACL, TopicAccess},
 };
+use crate::config::TeleMQServerConfig;
 
-pub use crate::authenticator_file::{AccessType, ClientCredentials, ClientRules};
-
-#[derive(Debug, Deserialize)]
-pub struct TopicACL {
-    pub topic: Topic,
-    pub access: TopicAccess,
-}
-
-#[derive(Debug, Deserialize)]
-pub enum TopicAccess {
-    Read,
-    Write,
-    ReadWrite,
-    Deny,
-}
+pub use super::authenticator_file::{AccessType, ClientCredentials, ClientRules};
 
 impl From<&AccessType> for TopicAccess {
     fn from(ta: &AccessType) -> TopicAccess {
@@ -35,28 +22,27 @@ impl From<&AccessType> for TopicAccess {
     }
 }
 
-#[derive(Debug)]
-pub struct ConnectResponse {
-    pub connection_allowed: bool,
-    pub topics_acl: Option<Vec<TopicACL>>,
-    pub max_packet_size: Option<usize>,
-}
-
 pub struct Authenticator {
+    broker_id: String,
+    cluster_id: String,
+    account_id: String,
     anonymous_allowed: bool,
     max_packet_size: Option<usize>,
     auth_file: Option<AuthenticatorFile>,
-    _auth_server: Option<SocketAddr>,
+    auth_server: Option<String>,
 }
 
 impl Authenticator {
     pub fn new(config: &TeleMQServerConfig) -> AuthenticatorInitResult<Self> {
         info!("[Authenticator]: Initializing with config\n{:?}", config);
         let mut this = Authenticator {
+            broker_id: config.broker_id.clone(),
+            cluster_id: config.cluster_id.clone(),
+            account_id: config.account_id.clone(),
             anonymous_allowed: config.anonymous_allowed,
             max_packet_size: config.max_packet_size.clone(),
             auth_file: None,
-            _auth_server: config.auth_endpoint,
+            auth_server: config.auth_endpoint.clone(),
         };
 
         if let Some(ref auth_file_path) = config.auth_file {
@@ -74,21 +60,35 @@ impl Authenticator {
         client_id: String,
         username: Option<String>,
         password: Option<String>,
-    ) -> AuthenticatorResult<ConnectResponse> {
+    ) -> AuthenticatorResult<LoginResponse> {
         let connection_allowed = match self.auth_file {
             Some(ref auth_file) => auth_file.login(socket_addr, &client_id, username, password),
-            None => self.anonymous_allowed,
+            None => match self.auth_server {
+                Some(ref addr) => {
+                    let req = LoginRequest {
+                        broker_id: &self.broker_id,
+                        cluster_id: &self.cluster_id,
+                        account_id: &self.account_id,
+                        socket_addr: &format!("{}", socket_addr),
+                        client_id: &client_id,
+                        username: &username,
+                        password: &password,
+                    };
+                    return server_connect(addr, req).await;
+                }
+                None => self.anonymous_allowed,
+            },
         };
 
         if !connection_allowed {
-            return Ok(ConnectResponse {
+            return Ok(LoginResponse {
                 connection_allowed: false,
                 topics_acl: None,
                 max_packet_size: self.max_packet_size.clone(),
             });
         }
 
-        Ok(ConnectResponse {
+        Ok(LoginResponse {
             connection_allowed: true,
             topics_acl: self.auth_file.as_ref().map(|ref auth_file| {
                 let client_rules = match auth_file.get_topics_acl(&client_id) {
@@ -132,8 +132,3 @@ impl Authenticator {
         }
     }
 }
-
-#[derive(Debug)]
-pub struct AuthenticatorError;
-
-pub type AuthenticatorResult<R> = Result<R, AuthenticatorError>;

@@ -3,14 +3,17 @@ use std::{
     io::Error as IoError,
     net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs},
     path::Path,
+    str::FromStr,
     time::Duration,
 };
 
 use mqtt_packets::v_3_1_1::topic::Topic;
 
+use ipnet::IpNet;
 use regex::Regex;
 use serde::Deserialize;
-use toml::{de::Error as TomlError, from_slice};
+use serde_json::{from_slice as json_from_slice, Error as JsonError};
+use toml::{de::Error as TomlError, from_slice as toml_from_slice};
 
 type OptPort = Option<u16>;
 type OptUsize = Option<usize>;
@@ -23,13 +26,14 @@ type OptList<T> = Option<Vec<T>>;
 #[derive(Deserialize)]
 pub struct TeleMQServerConfigSrc {
     pub broker_id: OptString,
+    pub cluster_id: OptString,
+    pub account_id: OptString,
     pub max_connections: OptUsize,
     pub tcp_port: OptPort,
     pub tls_port: OptPort,
     pub cert_file: OptString,
     pub key_file: OptString,
     pub ws_port: OptPort,
-    // TODO: not needed?
     pub activity_check_interval: OptDuration,
     pub backup_interval: OptDuration,
     pub keep_alive: OptDuration,
@@ -47,6 +51,7 @@ pub struct TeleMQServerConfigSrc {
     pub bridge_in_port: OptPort,
     pub bridge_out: OptList<BridgeOutConfigSrc>,
     pub admin_api_port: OptPort,
+    pub ip_whitelist: Option<Vec<String>>,
 }
 
 impl TeleMQServerConfigSrc {
@@ -54,10 +59,19 @@ impl TeleMQServerConfigSrc {
     pub const LOG_DEST_STDERR: &'static str = "stderr";
     pub const LOG_DEST_FILE_REGEX: &'static str = "^(file:)";
     pub const LOG_LEVEL: &'static [&'static str; 4] = &["error", "warn", "info", "debug"];
+    const FILE_TOML_EXTENSION: &'static str = "toml";
+    const FILE_JSON_EXTENSION: &'static str = "json";
 
     pub fn from_file<P: AsRef<Path>>(path: P) -> ConfigResult<Self> {
-        let config_file_content = read_file(path)?;
-        let config_src: TeleMQServerConfigSrc = from_slice(config_file_content.as_slice())?;
+        let config_file_content = read_file(&path)?;
+        let config_file_extension = path.as_ref().extension().and_then(|os_str| os_str.to_str());
+        let config_src: TeleMQServerConfigSrc = match config_file_extension {
+            Some(Self::FILE_TOML_EXTENSION) => toml_from_slice(config_file_content.as_slice())?,
+            Some(Self::FILE_JSON_EXTENSION) => json_from_slice(config_file_content.as_slice())?,
+            _ => {
+                unimplemented!();
+            }
+        };
         Self::validate(&config_src)?;
         Ok(config_src)
     }
@@ -75,6 +89,9 @@ impl TeleMQServerConfigSrc {
             .and_then(|_| Self::validate_state_store_url(&config_src.session_state_store_url))
             .and_then(|_| Self::validate_bridge_out(&config_src.bridge_out))
             .and_then(|_| Self::validate_broker_id(&config_src.broker_id))
+            .and_then(|_| Self::validate_cluster_id(&config_src.cluster_id))
+            .and_then(|_| Self::validate_account_id(&config_src.account_id))
+            .and_then(|_| Self::validate_ip_whitelist(&config_src.ip_whitelist))
     }
 
     fn validate_log_dest(maybe_log_dest: &OptString) -> ConfigResult<()> {
@@ -93,7 +110,7 @@ impl TeleMQServerConfigSrc {
           "Unsupported log destination \"{}\".\nSupported values: \"{}\", \"{}\", \"file:<path>\"",
           log_dest,
           Self::LOG_DEST_STDOUT,
-          log_dest == Self::LOG_DEST_STDERR
+          Self::LOG_DEST_STDERR
         )));
             }
             None => Ok(()),
@@ -127,11 +144,12 @@ impl TeleMQServerConfigSrc {
         if !anonymous_allowed.unwrap_or(true) && auth_file.is_none() && auth_endpoint.is_none() {
             return Err(TeleMQServerConfigError::WrongValue(format!("Invalid authentication configuration. Allow anonymous usage, or provide authentication endpoint or provide authentication file.")));
         }
-        if let Some(auth_url) = auth_endpoint {
-            if auth_url.parse::<SocketAddr>().is_err() {
-                return Err(TeleMQServerConfigError::WrongValue(format!("Invalid authentication configuration. auth_endpoint is not a valid socket addr")));
-            }
-        }
+        // if let Some(auth_url) = auth_endpoint {
+        //     return Ok(());
+        //     if auth_url.parse::<SocketAddr>().is_err() {
+        //         return Err(TeleMQServerConfigError::WrongValue(format!("Invalid authentication configuration. auth_endpoint is not a valid socket addr")));
+        //     }
+        // }
         return Ok(());
     }
 
@@ -174,11 +192,50 @@ impl TeleMQServerConfigSrc {
             "broker_id is a mandatory field".into(),
         ));
     }
+
+    fn validate_cluster_id(cluster_id: &OptString) -> ConfigResult<()> {
+        if cluster_id.is_some() {
+            return Ok(());
+        }
+
+        return Err(TeleMQServerConfigError::WrongValue(
+            "cluster_id is a mandatory field".into(),
+        ));
+    }
+
+    fn validate_account_id(account_id: &OptString) -> ConfigResult<()> {
+        if account_id.is_some() {
+            return Ok(());
+        }
+
+        return Err(TeleMQServerConfigError::WrongValue(
+            "account_id is a mandatory field".into(),
+        ));
+    }
+
+    fn validate_ip_whitelist(ip_whitelist: &Option<Vec<String>>) -> ConfigResult<()> {
+        if ip_whitelist.is_none() {
+            return Ok(());
+        }
+
+        for ref ip_net in ip_whitelist.as_ref().unwrap() {
+            if IpNet::from_str(ip_net).is_err() {
+                return Err(TeleMQServerConfigError::WrongValue(
+                    "ip_whitelist contains a value which cannot be parsed into IP network address"
+                        .into(),
+                ));
+            }
+        }
+
+        return Ok(());
+    }
 }
 
 #[derive(Debug)]
 pub struct TeleMQServerConfig {
     pub broker_id: String,
+    pub cluster_id: String,
+    pub account_id: String,
     pub max_connections: usize,
     // TCP listener
     pub tcp_addr: SocketAddr,
@@ -201,13 +258,14 @@ pub struct TeleMQServerConfig {
     // if None => unlimited
     pub max_storage_duration: OptDuration,
     pub anonymous_allowed: bool,
-    pub auth_endpoint: OptSocketAddr,
+    pub auth_endpoint: OptString,
     pub auth_file: OptString,
     pub sys_topics_update_interval: Duration,
     pub session_state_store_url: OptSocketAddr,
     pub bridge_in_addr: OptSocketAddr,
     pub bridge_out: OptList<BridgeOutConfig>,
     pub admin_api: OptSocketAddr,
+    pub ip_whitelist: Option<Vec<IpNet>>,
 }
 
 impl From<TeleMQServerConfigSrc> for TeleMQServerConfig {
@@ -217,6 +275,12 @@ impl From<TeleMQServerConfigSrc> for TeleMQServerConfig {
             broker_id: src
                 .broker_id
                 .unwrap_or_else(|| Self::DEFAULT_BROKER_ID.to_string()),
+            cluster_id: src
+                .cluster_id
+                .unwrap_or_else(|| Self::DEFAULT_CLUSTER_ID.to_string()),
+            account_id: src
+                .account_id
+                .unwrap_or_else(|| Self::DEFAULT_ACCOUNT_ID.to_string()),
             max_connections: src.max_connections.unwrap_or(Self::DEFAULT_MAX_CONNECTIONS),
             tcp_addr: local_listener(src.tcp_port.unwrap_or(Self::DEFAULT_TCP_PORT)),
             tls_addr: if with_tls {
@@ -254,7 +318,7 @@ impl From<TeleMQServerConfigSrc> for TeleMQServerConfig {
                         && Self::DEFAULT_ANONYMOUS_ALLOWED
                 }
             },
-            auth_endpoint: src.auth_endpoint.map(|url| url.parse().unwrap()),
+            auth_endpoint: src.auth_endpoint,
             auth_file: src.auth_file,
             sys_topics_update_interval: src
                 .sys_topics_update_interval
@@ -281,6 +345,12 @@ impl From<TeleMQServerConfigSrc> for TeleMQServerConfig {
                     .collect()
             }),
             admin_api: src.admin_api_port.map(|port| local_listener(port)),
+            ip_whitelist: src.ip_whitelist.map(|ip_net_strs| {
+                ip_net_strs
+                    .iter()
+                    .map(|ip_net_str| ip_net_str.parse().unwrap())
+                    .collect()
+            }),
         }
     }
 }
@@ -289,6 +359,8 @@ impl Default for TeleMQServerConfig {
     fn default() -> Self {
         TeleMQServerConfig {
             broker_id: Self::DEFAULT_BROKER_ID.to_string(),
+            cluster_id: Self::DEFAULT_CLUSTER_ID.to_string(),
+            account_id: Self::DEFAULT_ACCOUNT_ID.to_string(),
             max_connections: Self::DEFAULT_MAX_CONNECTIONS,
             tcp_addr: local_listener(Self::DEFAULT_TCP_PORT),
             tls_addr: None,
@@ -316,12 +388,15 @@ impl Default for TeleMQServerConfig {
             bridge_in_addr: None,
             bridge_out: None,
             admin_api: None,
+            ip_whitelist: None,
         }
     }
 }
 
 impl TeleMQServerConfig {
     pub const DEFAULT_BROKER_ID: &'static str = "<undefined>";
+    pub const DEFAULT_CLUSTER_ID: &'static str = "<undefined>";
+    pub const DEFAULT_ACCOUNT_ID: &'static str = "<undefined>";
     pub const DEFAULT_MAX_CONNECTIONS: usize = 10_000;
     pub const DEFAULT_TCP_PORT: u16 = 1883;
     pub const DEFAULT_TLS_PORT: u16 = 8883;
@@ -356,6 +431,12 @@ impl From<IoError> for TeleMQServerConfigError {
 
 impl From<TomlError> for TeleMQServerConfigError {
     fn from(err: TomlError) -> Self {
+        TeleMQServerConfigError::ConfigFile(format!("{:?}", err))
+    }
+}
+
+impl From<JsonError> for TeleMQServerConfigError {
+    fn from(err: JsonError) -> Self {
         TeleMQServerConfigError::ConfigFile(format!("{:?}", err))
     }
 }

@@ -9,6 +9,7 @@ extern crate log4rs;
 extern crate maplit;
 extern crate mqtt_packets;
 extern crate regex;
+extern crate reqwest;
 extern crate serde;
 extern crate serde_json;
 extern crate signal_hook;
@@ -22,8 +23,6 @@ extern crate warp;
 
 mod args;
 mod authenticator;
-mod authenticator_error;
-mod authenticator_file;
 mod config;
 mod connection;
 mod connection_provider;

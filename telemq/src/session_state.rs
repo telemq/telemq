@@ -541,6 +541,13 @@ impl SessionState {
         }
         None
     }
+
+    pub fn get_subscriptions_number(&self) -> Option<usize> {
+        if let SessionState::Connected(connected_state) = self {
+            return Some(connected_state.subscriptions.len());
+        }
+        None
+    }
 }
 
 /// Connected client session.

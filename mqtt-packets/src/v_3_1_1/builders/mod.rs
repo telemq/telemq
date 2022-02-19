@@ -1,4 +1,5 @@
 mod connack;
+mod connect;
 mod pingresp;
 mod puback;
 mod pubcomp;
@@ -9,6 +10,7 @@ mod suback;
 mod unsuback;
 
 pub use self::connack::ConnackBuilder;
+pub use self::connect::ConnectBuilder;
 pub use self::pingresp::PingrespPacketBuilder;
 pub use self::puback::PubackPacketBuilder;
 pub use self::pubcomp::PubcompPacketBuilder;

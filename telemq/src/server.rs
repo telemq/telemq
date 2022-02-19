@@ -20,6 +20,7 @@ use crate::{
     websocket_listener::WebsocketListener,
 };
 
+use ipnet::IpNet;
 use log::{debug, error, info};
 use mqtt_packets::v_3_1_1::ControlPacketCodec;
 use signal_hook::{consts::signal::*, low_level::exit};
@@ -107,6 +108,7 @@ impl Server {
                 self.config.keep_alive.clone(),
                 self.state_store.clone(),
                 self.config.max_connections,
+                self.config.max_subs_per_client,
             );
             println!("Websocket is listening on {:?}", web_addr);
         }
@@ -125,6 +127,18 @@ impl Server {
         loop {
             select! {
               Ok((stream, addr)) = tcp_listener.accept() => {
+                let add_ip_net = IpNet::from(addr.ip());
+                let ip_allowed = self.config.ip_whitelist
+                    .as_ref()
+                    .map(|allowed_nets| {
+                        return !allowed_nets.is_empty()
+                            && allowed_nets.iter()
+                                .any(|allowed_net| allowed_net.contains(&add_ip_net))
+                    })
+                    .unwrap_or(true);
+                if !ip_allowed {
+                    continue;
+                }
                 let connections_number = self.connections_number.clone();
                 if connections_number.fetch_update(
                     Ordering::SeqCst,
@@ -142,6 +156,7 @@ impl Server {
                 let stats_sender = self.stats_sender.clone();
                 let inactivity_interval = self.config.keep_alive.clone();
                 let state_store = self.state_store.clone();
+                let max_subs_per_client = self.config.max_subs_per_client.clone();
                 stream.set_ttl(self.config.keep_alive.as_secs() as u32)?;
 
                 spawn(async move {
@@ -152,7 +167,8 @@ impl Server {
                         stats_sender,
                         authenticator,
                         inactivity_interval,
-                        state_store
+                        state_store,
+                        max_subs_per_client
                     ).await {
                         error!("Could not add new TCP connection: {:?}: {:?}", addr, err);
                     }
@@ -176,6 +192,7 @@ impl Server {
                 let stats_sender = self.stats_sender.clone();
                 let authenticator = self.authenticator.clone();
                 let inactivity_interval = self.config.keep_alive.clone();
+                let max_subs_per_client = self.config.max_subs_per_client.clone();
                 let state_store = self.state_store.clone();
 
                 spawn(async move {
@@ -186,7 +203,8 @@ impl Server {
                         stats_sender,
                         authenticator,
                         inactivity_interval,
-                        state_store
+                        state_store,
+                        max_subs_per_client
                     ).await {
                         error!("Could not add new TCP connection: {:?}: {:?}", addr, err);
                     }
@@ -218,6 +236,7 @@ async fn peer_process_tcp(
     authenticator: Arc<RwLock<Authenticator>>,
     inactivity_interval: time::Duration,
     state_store: Arc<RwLock<SessionStateStore>>,
+    max_subs_per_client: Option<usize>,
 ) -> ServerResult<()> {
     let packets = Framed::new(stream, ControlPacketCodec::new());
 
@@ -229,6 +248,7 @@ async fn peer_process_tcp(
         authenticator,
         inactivity_interval,
         state_store,
+        max_subs_per_client,
     )
     .await
     .map_err(|err| format!("{:?}", err))?;
@@ -244,6 +264,7 @@ async fn peer_process_tls(
     authenticator: Arc<RwLock<Authenticator>>,
     inactivity_interval: time::Duration,
     state_store: Arc<RwLock<SessionStateStore>>,
+    max_subs_per_client: Option<usize>,
 ) -> ServerResult<()> {
     let packets = Framed::new(stream, ControlPacketCodec::new());
 
@@ -255,6 +276,7 @@ async fn peer_process_tls(
         authenticator,
         inactivity_interval,
         state_store,
+        max_subs_per_client,
     )
     .await
     .map_err(|err| format!("{:?}", err))?;
@@ -287,7 +309,6 @@ async fn handle_os_signal(
                         format!("[Server]: unable to gracefully shut down TeleMQ {:?}", err),
                     )
                 })?;
-            // handle.close();
             Ok(false)
         }
         _ => unreachable!(),

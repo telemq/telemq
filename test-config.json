@@ -1,0 +1,9 @@
+{
+  "broker_id": "broker-1",
+  "cluster_id": "cluster-1",
+  "max_connections": 1000,
+  "log_level": "error",
+  "anonymous_allowed": true,
+  "keep_alive": 60,
+  "activity_check_interval": 60
+}
