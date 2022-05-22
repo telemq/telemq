@@ -1,10 +1,7 @@
 use log::error;
 use reqwest::Client;
 
-use super::{
-    authenticator_error::AuthenticatorResult,
-    authenticator_types::{LoginRequest, LoginResponse},
-};
+use plugin_types::authenticator::*;
 
 pub async fn connect<'a>(
     url: &String,

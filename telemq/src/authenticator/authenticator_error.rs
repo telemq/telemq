@@ -28,8 +28,3 @@ impl From<AddrParseError> for AuthenticatorInitError {
 }
 
 pub type AuthenticatorInitResult<T> = Result<T, AuthenticatorInitError>;
-
-#[derive(Debug)]
-pub struct AuthenticatorError;
-
-pub type AuthenticatorResult<R> = Result<R, AuthenticatorError>;

@@ -1,12 +1,11 @@
 use log::info;
 use std::net::SocketAddr;
 
-use super::{
-    authenticator_error::{AuthenticatorInitResult, AuthenticatorResult},
-    authenticator_file::AuthenticatorFile,
-    authenticator_server_client::connect as server_connect,
-    authenticator_types::{LoginRequest, LoginResponse, TopicACL, TopicAccess},
+use plugin_types::authenticator::{
+    AuthenticatorResult, LoginRequest, LoginResponse, TopicACL, TopicAccess,
 };
+
+use super::{authenticator_error::AuthenticatorInitResult, authenticator_file::AuthenticatorFile};
 use crate::config::TeleMQServerConfig;
 
 pub use super::authenticator_file::{AccessType, ClientCredentials, ClientRules};
@@ -74,8 +73,9 @@ impl Authenticator {
                         username: &username,
                         password: &password,
                     };
-                    return server_connect(addr, req).await;
+                    return authenticator_http::connect(addr, req).await;
                 }
+
                 None => self.anonymous_allowed,
             },
         };

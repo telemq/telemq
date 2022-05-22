@@ -1,4 +1,5 @@
 .vscode
+.DS_store
 local-cert
 dev-configs
 target

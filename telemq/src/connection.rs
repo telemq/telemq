@@ -1,5 +1,5 @@
 use crate::{
-    authenticator::{Authenticator, LoginResponse as AuthenticatorConnectResponse, TopicAccess},
+    authenticator::Authenticator,
     connection_provider::SessionConnectionProvider,
     control::{ControlMessage, ControlSender},
     net_connection::NetConnection,
@@ -8,6 +8,9 @@ use crate::{
     stats::{StatsMessage, StatsSender},
     transaction::TransactionSendState,
 };
+
+use plugin_types::authenticator::{LoginResponse as AuthenticatorConnectResponse, TopicAccess};
+
 // FIXME: define logging levels
 use log::{error, info};
 use mqtt_packets::v_3_1_1::{
