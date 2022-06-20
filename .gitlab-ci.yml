@@ -1,9 +1,21 @@
+variables:
+  IMAGE_NAME: telemq-broker
+  TAG_LATEST: $AWS_ECR_URI/$IMAGE_NAME:latest
+  TAG_COMMIT: $AWS_ECR_URI/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+
 stages:
   - build
-  - deploy
+  - test
+  - release
 
-default:
-  image: python:3.10.0-buster
+test_telemq_broker:
+  image: rust:1.56
+  when: manual
+  stage: test
+  script:
+    - cargo test
 
 build_telemq_broker:
   image: rust:1.56
@@ -15,16 +27,39 @@ build_telemq_broker:
       - target/release/telemq
       - target/release/telemq.d
 
-copy_to_linode_storage:
+push_build_to_object_store:
+  stage: release
+  when: manual
+  only:
+    - tags
+  image: 
+    name: amazon/aws-cli
+    entrypoint: [""]
   before_script:
-    - scripts/ci/configure_cli.sh
-    - linode-cli obj upload
-  stage: deploy
+    - yum install -y zip
   script:
-    - echo "Mock for copying to the linode storage"
+    - mkdir build-$CI_COMMIT_SHORT_SHA
+    - cp target/release/telemq build-$CI_COMMIT_SHORT_SHA/telemq
+    - cp target/release/telemq.d build-$CI_COMMIT_SHORT_SHA/telemq.d
+    - zip -r build-$CI_COMMIT_SHORT_SHA.zip build-$CI_COMMIT_SHORT_SHA/
+    - AWS_ACCESS_KEY_ID=$VULTR_ACCESS_KEY AWS_SECRET_ACCESS_KEY=$VULTR_SECRET_KEY aws s3 cp build-$CI_COMMIT_SHORT_SHA.zip s3://telemq-builds --endpoint=https://ewr1.vultrobjects.com
 
-start_test_instance:
-  stage: deploy
-  needs: ['copy_to_linode_storage']
-  script:
-    - echo "Mock for starting a test instance with a new build"
+# publish_to_ecr:
+#   stage: release
+#   when: manual
+#   only:
+#     - tags
+#   image: 
+#     name: amazon/aws-cli
+#     entrypoint: [""]
+#   services:
+#     - docker:dind
+#   before_script:
+#     - amazon-linux-extras install docker
+#     - aws --version
+#     - docker --version
+#   script:
+#     - docker build --cache-from $TAG_LATEST -t $TAG_COMMIT -t $TAG_LATEST . 
+#     - aws ecr get-login-password --region $AWS_ECR_REGION | docker login --username AWS --password-stdin $AWS_ECR_URI
+#     - docker push $TAG_COMMIT
+#     - docker push $TAG_LATEST

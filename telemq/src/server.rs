@@ -9,6 +9,7 @@ use std::{
 };
 
 use crate::{
+    admin_api,
     authenticator::Authenticator,
     config::TeleMQServerConfig,
     connection::Connection,
@@ -49,10 +50,11 @@ pub struct Server {
 
 impl Server {
     pub async fn new(config: TeleMQServerConfig) -> Option<Self> {
-        let (tx, rx) = channel(1);
+        let (shutdown_sender, shutdown_receiver) = channel(1);
         let state_store = Arc::new(RwLock::new(SessionStateStore::new()));
 
-        let (control, control_sender) = Control::new(&config, state_store.clone(), tx).await;
+        let (control, control_sender) =
+            Control::new(&config, state_store.clone(), shutdown_sender).await;
         spawn(async move {
             if let Err(err) = control.run().await {
                 error!("[Control Worker]: finished with error {:?}", err);
@@ -77,7 +79,7 @@ impl Server {
             config,
             authenticator,
             state_store,
-            shut_down_channel: rx,
+            shut_down_channel: shutdown_receiver,
             connections_number: Arc::new(AtomicUsize::new(0)),
         })
     }
@@ -115,14 +117,13 @@ impl Server {
 
         let mut signals = Signals::new(&[SIGHUP, SIGTERM, SIGINT, SIGQUIT])?;
 
-        // TODO:
-        // if let Some(admin_api_socket) = self.config.admin_api {
-        //     let stats = self.stats.clone();
-        //     let authenticator = self.authenticator.clone();
-        //     spawn(async move {
-        //         admin_api::run(admin_api_socket, authenticator, stats).await;
-        //     });
-        // }
+        if let Some(admin_api_origin) = self.config.admin_api {
+            // let stats = self.stats.clone();
+            // let authenticator = self.authenticator.clone();
+            spawn(async move {
+                admin_api::run(admin_api_origin).await;
+            });
+        }
 
         loop {
             select! {

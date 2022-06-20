@@ -21,6 +21,7 @@ extern crate tokio_util;
 extern crate toml;
 extern crate warp;
 
+mod admin_api;
 mod args;
 mod authenticator;
 mod config;
