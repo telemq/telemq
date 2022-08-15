@@ -1,5 +1,5 @@
 [package]
-name = "authenticator_http"
+name = "telemq_authenticator_http"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,4 +10,4 @@ log = "0.4"
 reqwest = { version = "0.11", features = ["json"] }
 
 # telemq dependencies
-plugin_types = { path = "../plugin_types", version = "0.1", features = ["authenticator"] }
+telemq_plugin_types = { path = "../plugin_types", version = "0.1", features = ["authenticator"] }

@@ -9,7 +9,7 @@ use crate::{
     transaction::TransactionSendState,
 };
 
-use plugin_types::authenticator::{LoginResponse as AuthenticatorConnectResponse, TopicAccess};
+use telemq_plugin_types::authenticator::{LoginResponse as AuthenticatorConnectResponse, TopicAccess};
 
 // FIXME: define logging levels
 use log::{error, info};

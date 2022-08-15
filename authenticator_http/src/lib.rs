@@ -1,7 +1,7 @@
 use log::error;
 use reqwest::Client;
 
-use plugin_types::authenticator::*;
+use telemq_plugin_types::authenticator::*;
 
 pub async fn connect<'a>(
     url: &String,
