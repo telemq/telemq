@@ -1,15 +1,5 @@
 # TeleMQ configuration TOML file
 
-### `broker_id`
-
-**`broker_id`** - a string which will be used as a broker ID. If not provided default value `<undefined>` will be used.
-
-Example:
-
-```toml
-broker_id = "broker_eJa9C5VGWuGryALX"
-```
-
 ### `max_connections`
 
 **`max_connections`** - a maximal number of concurent connections allowed by TeleMQ server. It includes all types of connections - plain TCP, TLS, Websocket connections. If a `max_connections` reached no new connection will be accepted. Default value 10,000 connections.
@@ -49,6 +39,16 @@ Example:
 
 ```toml
 ws_port = 1880
+```
+
+### `wss_port`
+
+**`wss_port`** - a port which will be used by TeleMQ listener to accept Websocket TLS connections. No default value - Websocket TLS connections are disabled by default. <u>Important:</u> in order to make Websocket TLS listener working you have additionaly to provide a certificate as a `cert_file` and `key_file` config property. If it is not provided, `wss_port` will be ignored and a Websocket TLS listener won't be created.
+
+Example:
+
+```toml
+wss_port = 1881
 ```
 
 ### `keep_alive`
