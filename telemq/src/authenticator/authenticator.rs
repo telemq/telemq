@@ -1,7 +1,7 @@
 use log::info;
 use std::net::SocketAddr;
 
-use plugin_types::authenticator::{
+use telemq_plugin_types::authenticator::{
     AuthenticatorResult, LoginRequest, LoginResponse, TopicACL, TopicAccess,
 };
 
@@ -73,7 +73,7 @@ impl Authenticator {
                         username: &username,
                         password: &password,
                     };
-                    return authenticator_http::connect(addr, req).await;
+                    return telemq_authenticator_http::connect(addr, req).await;
                 }
 
                 None => self.anonymous_allowed,
