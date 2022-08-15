@@ -11,7 +11,7 @@ use warp::filters::ws::{Message, WebSocket};
 pub enum NetConnection {
     Tcp(Framed<TcpStream, ControlPacketCodec>),
     Tls(Framed<TlsStream<TcpStream>, ControlPacketCodec>),
-    Web {
+    Ws {
         websocket: WebSocket,
         codec: ControlPacketCodec,
         buf_in: BytesMut,
@@ -27,8 +27,8 @@ impl NetConnection {
         NetConnection::Tls(framed_tls)
     }
 
-    pub fn new_web(arg: (WebSocket, ControlPacketCodec)) -> Self {
-        NetConnection::Web {
+    pub fn new_ws(arg: (WebSocket, ControlPacketCodec)) -> Self {
+        NetConnection::Ws {
             websocket: arg.0,
             codec: arg.1,
             buf_in: BytesMut::new(),
@@ -39,7 +39,7 @@ impl NetConnection {
         match self {
             NetConnection::Tcp(tcp_stream) => tcp_stream.next().await,
             NetConnection::Tls(tls_stream) => tls_stream.next().await,
-            NetConnection::Web {
+            NetConnection::Ws {
                 websocket,
                 codec,
                 buf_in: ref mut buf,
@@ -78,7 +78,7 @@ impl NetConnection {
         match self {
             NetConnection::Tcp(tcp_stream) => tcp_stream.send(&control_packet).await,
             NetConnection::Tls(tls_stream) => tls_stream.send(&control_packet).await,
-            NetConnection::Web {
+            NetConnection::Ws {
                 websocket, codec, ..
             } => {
                 let mut bytes = BytesMut::new();

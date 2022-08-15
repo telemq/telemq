@@ -15,9 +15,9 @@ use std::{
 use tokio::{spawn, sync::RwLock};
 use warp::{self, filters::ws::WebSocket, Filter, Reply};
 
-pub struct WebsocketListener;
+pub struct WsListener;
 
-impl WebsocketListener {
+impl WsListener {
     pub fn bind(
         addr: SocketAddr,
         connections_number: Arc<AtomicUsize>,
@@ -97,7 +97,7 @@ async fn peer_process(
 ) {
     info!("new TCP connection from {:?}", addr);
 
-    let connection = match Connection::new_websocket(
+    let connection = match Connection::new_ws(
         websocket,
         ControlPacketCodec::new(),
         addr,

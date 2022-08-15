@@ -246,7 +246,7 @@ impl Connection {
         })
     }
 
-    pub async fn new_websocket(
+    pub async fn new_ws(
         websocket: WebSocket,
         codec: ControlPacketCodec,
         addr: SocketAddr,
@@ -258,7 +258,7 @@ impl Connection {
         max_subs_per_client: Option<usize>,
     ) -> io::Result<Self> {
         let (tx_self, rx_self) = unbounded_channel();
-        let packets = NetConnection::new_web((websocket, codec));
+        let packets = NetConnection::new_ws((websocket, codec));
         let disconnect = channel(1);
         let state = SessionState::NonConnected;
         let last_activity = time::Instant::now();
