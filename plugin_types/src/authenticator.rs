@@ -9,9 +9,6 @@ pub type AuthenticatorResult<R> = Result<R, AuthenticatorError>;
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginRequest<'a> {
-  pub broker_id: &'a String,
-  pub account_id: &'a String,
-  pub cluster_id: &'a String,
   pub socket_addr: &'a String,
   pub client_id: &'a String,
   pub username: &'a Option<String>,
