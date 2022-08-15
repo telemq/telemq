@@ -17,7 +17,8 @@ use crate::{
     session_state_store::SessionStateStore,
     stats::{Stats, StatsConfig, StatsSender},
     tls_listener::TlsListener,
-    websocket_listener::WebsocketListener,
+    ws_listener::WsListener,
+    wss_listener::WssListener,
 };
 
 use ipnet::IpNet;
@@ -99,7 +100,7 @@ impl Server {
         }
 
         if let Some(web_addr) = self.config.ws_addr {
-            WebsocketListener::bind(
+            WsListener::bind(
                 web_addr,
                 self.connections_number.clone(),
                 self.authenticator.clone(),
@@ -111,6 +112,27 @@ impl Server {
                 self.config.max_subs_per_client,
             );
             println!("Websocket is listening on {:?}", web_addr);
+        }
+
+        if let (Some(web_tls_addr), &Some(ref cert_path), &Some(ref key_path)) = (
+            self.config.wss_addr,
+            &self.config.cert_file,
+            &self.config.key_file,
+        ) {
+            WssListener::bind(
+                web_tls_addr,
+                self.connections_number.clone(),
+                self.authenticator.clone(),
+                self.control_sender.clone(),
+                self.stats_sender.clone(),
+                self.config.keep_alive.clone(),
+                self.state_store.clone(),
+                self.config.max_connections,
+                self.config.max_subs_per_client,
+                cert_path.clone(),
+                key_path.clone(),
+            );
+            println!("Websocket TLS is listening on {:?}", web_tls_addr);
         }
 
         let mut signals = Signals::new(&[SIGHUP, SIGTERM, SIGINT, SIGQUIT])?;

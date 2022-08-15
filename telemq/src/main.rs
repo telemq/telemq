@@ -38,7 +38,8 @@ mod stats;
 mod subscription_tree;
 mod tls_listener;
 mod transaction;
-mod websocket_listener;
+mod ws_listener;
+mod wss_listener;
 
 use args::parse_args;
 use config::TeleMQServerConfig;

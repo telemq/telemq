@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use toml::from_slice;
 
 use super::authenticator_error::*;
-// use super::authenticator_types::
 
 #[derive(Debug)]
 pub struct AuthenticatorFile {

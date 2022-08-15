@@ -34,6 +34,7 @@ pub struct TeleMQServerConfigSrc {
     pub cert_file: OptString,
     pub key_file: OptString,
     pub ws_port: OptPort,
+    pub wss_port: OptPort,
     pub activity_check_interval: OptDuration,
     pub backup_interval: OptDuration,
     pub keep_alive: OptDuration,
@@ -245,6 +246,7 @@ pub struct TeleMQServerConfig {
     pub key_file: OptString,
     // Websocket listener
     pub ws_addr: OptSocketAddr,
+    pub wss_addr: OptSocketAddr,
     pub activity_check_interval: Duration,
     pub backup_interval: Duration,
     pub keep_alive: Duration,
@@ -293,6 +295,7 @@ impl From<TeleMQServerConfigSrc> for TeleMQServerConfig {
             cert_file: src.cert_file,
             key_file: src.key_file,
             ws_addr: src.ws_port.map(local_listener),
+            wss_addr: src.wss_port.map(local_listener),
             activity_check_interval: Duration::from_secs(
                 src.activity_check_interval
                     .unwrap_or(Self::DEFAULT_ACTIVITY_CHECK_INTERVAL),
@@ -367,6 +370,7 @@ impl Default for TeleMQServerConfig {
             cert_file: None,
             key_file: None,
             ws_addr: None,
+            wss_addr: None,
             activity_check_interval: Duration::from_secs(Self::DEFAULT_ACTIVITY_CHECK_INTERVAL),
             backup_interval: Duration::from_secs(Self::DEFAULT_BACKUP_INTERVAL),
             keep_alive: Duration::from_secs(Self::DEFAULT_KEEP_ALIVE),
