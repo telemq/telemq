@@ -234,9 +234,6 @@ impl TeleMQServerConfigSrc {
 
 #[derive(Debug)]
 pub struct TeleMQServerConfig {
-    pub broker_id: String,
-    pub cluster_id: String,
-    pub account_id: String,
     pub max_connections: usize,
     // TCP listener
     pub tcp_addr: SocketAddr,
@@ -274,15 +271,6 @@ impl From<TeleMQServerConfigSrc> for TeleMQServerConfig {
     fn from(src: TeleMQServerConfigSrc) -> Self {
         let with_tls = src.cert_file.is_some();
         TeleMQServerConfig {
-            broker_id: src
-                .broker_id
-                .unwrap_or_else(|| Self::DEFAULT_BROKER_ID.to_string()),
-            cluster_id: src
-                .cluster_id
-                .unwrap_or_else(|| Self::DEFAULT_CLUSTER_ID.to_string()),
-            account_id: src
-                .account_id
-                .unwrap_or_else(|| Self::DEFAULT_ACCOUNT_ID.to_string()),
             max_connections: src.max_connections.unwrap_or(Self::DEFAULT_MAX_CONNECTIONS),
             tcp_addr: local_listener(src.tcp_port.unwrap_or(Self::DEFAULT_TCP_PORT)),
             tls_addr: if with_tls {
@@ -361,9 +349,6 @@ impl From<TeleMQServerConfigSrc> for TeleMQServerConfig {
 impl Default for TeleMQServerConfig {
     fn default() -> Self {
         TeleMQServerConfig {
-            broker_id: Self::DEFAULT_BROKER_ID.to_string(),
-            cluster_id: Self::DEFAULT_CLUSTER_ID.to_string(),
-            account_id: Self::DEFAULT_ACCOUNT_ID.to_string(),
             max_connections: Self::DEFAULT_MAX_CONNECTIONS,
             tcp_addr: local_listener(Self::DEFAULT_TCP_PORT),
             tls_addr: None,
@@ -398,9 +383,6 @@ impl Default for TeleMQServerConfig {
 }
 
 impl TeleMQServerConfig {
-    pub const DEFAULT_BROKER_ID: &'static str = "<undefined>";
-    pub const DEFAULT_CLUSTER_ID: &'static str = "<undefined>";
-    pub const DEFAULT_ACCOUNT_ID: &'static str = "<undefined>";
     pub const DEFAULT_MAX_CONNECTIONS: usize = 10_000;
     pub const DEFAULT_TCP_PORT: u16 = 1883;
     pub const DEFAULT_TLS_PORT: u16 = 8883;

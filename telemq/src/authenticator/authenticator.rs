@@ -22,9 +22,6 @@ impl From<&AccessType> for TopicAccess {
 }
 
 pub struct Authenticator {
-    broker_id: String,
-    cluster_id: String,
-    account_id: String,
     anonymous_allowed: bool,
     max_packet_size: Option<usize>,
     auth_file: Option<AuthenticatorFile>,
@@ -35,9 +32,6 @@ impl Authenticator {
     pub fn new(config: &TeleMQServerConfig) -> AuthenticatorInitResult<Self> {
         info!("[Authenticator]: Initializing with config\n{:?}", config);
         let mut this = Authenticator {
-            broker_id: config.broker_id.clone(),
-            cluster_id: config.cluster_id.clone(),
-            account_id: config.account_id.clone(),
             anonymous_allowed: config.anonymous_allowed,
             max_packet_size: config.max_packet_size.clone(),
             auth_file: None,
@@ -65,9 +59,6 @@ impl Authenticator {
             None => match self.auth_server {
                 Some(ref addr) => {
                     let req = LoginRequest {
-                        broker_id: &self.broker_id,
-                        cluster_id: &self.cluster_id,
-                        account_id: &self.account_id,
                         socket_addr: &format!("{}", socket_addr),
                         client_id: &client_id,
                         username: &username,
