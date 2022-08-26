@@ -1,4 +1,5 @@
 use std::{
+    convert::TryFrom,
     fs::read as read_file,
     io::Error as IoError,
     net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs},
@@ -10,10 +11,13 @@ use std::{
 use mqtt_packets::v_3_1_1::topic::Topic;
 
 use ipnet::IpNet;
+use log::error;
 use regex::Regex;
 use serde::Deserialize;
 use serde_json::{from_slice as json_from_slice, Error as JsonError};
 use toml::{de::Error as TomlError, from_slice as toml_from_slice};
+
+use crate::clustering::{ClusteringConfig, ClusteringConfigSrc};
 
 type OptPort = Option<u16>;
 type OptUsize = Option<usize>;
@@ -53,6 +57,7 @@ pub struct TeleMQServerConfigSrc {
     pub bridge_out: OptList<BridgeOutConfigSrc>,
     pub admin_api_port: OptPort,
     pub ip_whitelist: Option<Vec<String>>,
+    pub clustering: Option<ClusteringConfigSrc>,
 }
 
 impl TeleMQServerConfigSrc {
@@ -265,6 +270,7 @@ pub struct TeleMQServerConfig {
     pub bridge_out: OptList<BridgeOutConfig>,
     pub admin_api: OptSocketAddr,
     pub ip_whitelist: Option<Vec<IpNet>>,
+    pub clustering: Option<ClusteringConfig>,
 }
 
 impl From<TeleMQServerConfigSrc> for TeleMQServerConfig {
@@ -342,6 +348,14 @@ impl From<TeleMQServerConfigSrc> for TeleMQServerConfig {
                     .map(|ip_net_str| ip_net_str.parse().unwrap())
                     .collect()
             }),
+            clustering: src.clustering.and_then(|config_src| {
+                ClusteringConfig::try_from(config_src)
+                    .or_else(|err| {
+                        error!("[Config error]: {:?}", err);
+                        Err(err)
+                    })
+                    .ok()
+            }),
         }
     }
 }
@@ -378,6 +392,7 @@ impl Default for TeleMQServerConfig {
             bridge_out: None,
             admin_api: None,
             ip_whitelist: None,
+            clustering: None,
         }
     }
 }

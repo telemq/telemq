@@ -40,6 +40,7 @@ mod tls_listener;
 mod transaction;
 mod ws_listener;
 mod wss_listener;
+mod clustering;
 
 use args::parse_args;
 use config::TeleMQServerConfig;
