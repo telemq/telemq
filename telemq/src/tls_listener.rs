@@ -1,12 +1,10 @@
 use std::{fs::File, io, net::SocketAddr, path::Path, sync::Arc, time::Duration};
 
 use futures::future::pending;
+use rustls_pemfile::{certs, rsa_private_keys};
 use tokio::net::{TcpListener, TcpStream};
 use tokio_rustls::{
-    rustls::{
-        internal::pemfile::{certs, rsa_private_keys},
-        Certificate, NoClientAuth, PrivateKey, ServerConfig,
-    },
+    rustls::{Certificate, PrivateKey, ServerConfig},
     server::TlsStream,
     TlsAcceptor,
 };
@@ -28,10 +26,15 @@ impl TlsListener {
             (Some(addr), Some(cert_path), Some(key_path)) => {
                 let certs = load_certs(Path::new(&cert_path))?;
                 let mut keys = load_keys(Path::new(&key_path))?;
-                let mut config = ServerConfig::new(NoClientAuth::new());
-                config
-                    .set_single_cert(certs, keys.remove(0))
+                let config = ServerConfig::builder()
+                    .with_safe_defaults()
+                    .with_no_client_auth()
+                    .with_single_cert(certs, keys.remove(0))
                     .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
+                // let config = ServerConfig::new();
+                // config
+                //     .set_single_cert(certs, keys.remove(0))
+                //     .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
                 Ok(TlsListener {
                     listener: Some(TcpListener::bind(&addr).await?),
                     config: Some(config),
@@ -63,9 +66,11 @@ impl TlsListener {
 fn load_certs(path: &Path) -> io::Result<Vec<Certificate>> {
     certs(&mut io::BufReader::new(File::open(path)?))
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid cert"))
+        .map(|mut certs| certs.drain(..).map(Certificate).collect())
 }
 
 fn load_keys(path: &Path) -> io::Result<Vec<PrivateKey>> {
     rsa_private_keys(&mut io::BufReader::new(File::open(path)?))
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid key"))
+        .map(|mut keys| keys.drain(..).map(PrivateKey).collect())
 }

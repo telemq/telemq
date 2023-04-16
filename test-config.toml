@@ -18,5 +18,5 @@ wss_port = 1881
 # ip_whitelist = ['127.0.0.1/32']
 # sys_topics_update_interval = 20
 # session_store_url = "http://localhost:8086"
-cert_file = "./local-cert/server.crt"
-key_file = "./local-cert/server.key"
+cert_file = "./local-cert/localhost.crt"
+key_file = "./local-cert/localhost.key"
