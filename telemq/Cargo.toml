@@ -1,6 +1,6 @@
 [package]
 name = "telemq"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2018"
 description = "Experimental MQTT broker"
 homepage = "http://telemq.com"
@@ -36,8 +36,8 @@ reqwest = { version = "0.11", features = ["json"] }
 warp = { version = "0.3", features = ["tls"] }
 
 mqtt-packets = { path = "../mqtt-packets", version = "0.1.0", features = ["v_3_1_1"] }
-plugin_types = { path = "../plugin_types", version = "0.1", features = ["authenticator"] }
-authenticator_http = { path = "../authenticator_http", version = "0.1" }
+telemq_plugin_types = { path = "../plugin_types", version = "0.1", features = ["authenticator"] }
+telemq_authenticator_http = { path = "../authenticator_http", version = "0.1" }
 
 [dev-dependencies]
 maplit = "1"
