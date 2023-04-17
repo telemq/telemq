@@ -11,7 +11,7 @@ stages:
   - release
 
 test_telemq_broker:
-  image: rust:1.56
+  image: rust:1.67
   when: manual
   stage: test
   script:
