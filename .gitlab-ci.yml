@@ -18,7 +18,7 @@ test_telemq_broker:
     - cargo test
 
 build_telemq_broker:
-  image: rust:1.56
+  image: rust:1.67
   stage: build
   script:
     - cargo build --release
