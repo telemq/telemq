@@ -1,7 +1,7 @@
 [package]
 name = "telemq"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 description = "Experimental MQTT broker"
 homepage = "http://telemq.com"
 repository = "https://github.com/telemq/telemq.git"
@@ -11,33 +11,34 @@ license = "MIT/Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bytes = "1.0"
-log = "0.4"
-log4rs = {version = "1.0", features = ["console_appender", "file_appender"]}
-serde = "1"
-serde_json = "1.0.74"
-toml = "0.5"
-regex = "1.4"
-clap = "3.0.0-beta.8"
-tokio = {version = "1.4", features = ["full", "sync", "time"]}
-tokio-util = {version = "0.6.5", features = ["codec"]}
-tokio-stream = "0.1.5"
-signal-hook = "0.3"
-signal-hook-tokio = {version="0.3.0", features = ["futures-v0_3"]}
-futures = { version = "0.3.0", features = ["thread-pool"]}
-rust-crypto = "0.2.36"
-tokio-rustls = "0.24.0"
-rustls-pemfile = "1.0"
-num_cpus = "1.13.0"
-ipnet = "^2.0.0"
-reqwest = { version = "0.11", features = ["json"] }
-# libc = "0.2"
-
-warp = { version = "0.3", features = ["tls"] }
-
+# local
 mqtt-packets = { path = "../mqtt-packets", version = "0.1.0", features = ["v_3_1_1"] }
 plugin_types = { path = "../plugin_types", version = "0.1", features = ["authenticator"] }
 authenticator_http = { path = "../authenticator_http", version = "0.1" }
+
+# 3rd party
+axum = "0.6.16"
+bytes = "1.0"
+clap = "3.0.0-beta.8"
+futures = { version = "0.3.0", features = ["thread-pool"]}
+ipnet = "^2.0.0"
+log = "0.4"
+log4rs = {version = "1.0", features = ["console_appender", "file_appender"]}
+num_cpus = "1.13.0"
+regex = "1.4"
+reqwest = { version = "0.11", features = ["json"] }
+rust-crypto = "0.2.36"
+rustls-pemfile = "1.0"
+tokio = {version = "1.4", features = ["full", "sync", "time"]}
+tokio-rustls = "0.24.0"
+tokio-stream = "0.1.5"
+tokio-util = {version = "0.6.5", features = ["codec"]}
+toml = "0.5"
+serde = "1"
+serde_json = "1.0.74"
+signal-hook = "0.3"
+signal-hook-tokio = {version="0.3.0", features = ["futures-v0_3"]}
+warp = { version = "0.3", features = ["tls"] }
 
 [dev-dependencies]
 maplit = "1"

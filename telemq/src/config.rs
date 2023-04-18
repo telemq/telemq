@@ -7,8 +7,6 @@ use std::{
     time::Duration,
 };
 
-use mqtt_packets::v_3_1_1::topic::Topic;
-
 use ipnet::IpNet;
 use regex::Regex;
 use serde::Deserialize;
@@ -216,9 +214,6 @@ impl TeleMQServerConfigSrc {
 
 #[derive(Debug)]
 pub struct TeleMQServerConfig {
-    pub broker_id: String,
-    pub cluster_id: String,
-    pub account_id: String,
     pub max_connections: usize,
     // TCP listener
     pub tcp_addr: SocketAddr,

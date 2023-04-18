@@ -12,6 +12,7 @@ use super::authenticator_error::*;
 #[derive(Debug)]
 pub struct AuthenticatorFile {
     anonymous_allowed: bool,
+    #[allow(unused)]
     topic_all_rules: Option<Vec<TopicRule>>,
     topic_client_rules: Option<Vec<ClientRules>>,
     credentials: Option<Vec<ClientCredentials>>,
