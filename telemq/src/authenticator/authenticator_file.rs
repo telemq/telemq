@@ -1,11 +1,11 @@
-use std::{fs::read as read_file, net::SocketAddr, path::Path};
+use std::{fs::read_to_string as read_file, net::SocketAddr, path::Path};
 
 use crypto::{digest::Digest, sha2::Sha256};
 use ipnet::IpNet;
 use log::error;
 use mqtt_packets::v_3_1_1::topic::Topic;
 use serde::{Deserialize, Serialize};
-use toml::from_slice;
+use toml::from_str;
 
 use super::authenticator_error::*;
 
@@ -205,8 +205,7 @@ pub struct AuthenticatorFileSrc {
 impl AuthenticatorFileSrc {
     pub fn try_from_file<P: AsRef<Path>>(path: P) -> AuthenticatorInitResult<Self> {
         let authenticator_file_content = read_file(path)?;
-        let authenticator_file: AuthenticatorFileSrc =
-            from_slice(authenticator_file_content.as_slice())?;
+        let authenticator_file: AuthenticatorFileSrc = from_str(&authenticator_file_content)?;
         Ok(authenticator_file)
     }
 }

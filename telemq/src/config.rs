@@ -1,5 +1,5 @@
 use std::{
-    fs::read as read_file,
+    fs::read_to_string as read_file,
     io::Error as IoError,
     net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs},
     path::Path,
@@ -10,8 +10,8 @@ use std::{
 use ipnet::IpNet;
 use regex::Regex;
 use serde::Deserialize;
-use serde_json::{from_slice as json_from_slice, Error as JsonError};
-use toml::{de::Error as TomlError, from_slice as toml_from_slice};
+use serde_json::{from_str as json_from_str, Error as JsonError};
+use toml::{de::Error as TomlError, from_str as toml_from_str};
 
 type OptPort = Option<u16>;
 type OptUsize = Option<usize>;
@@ -63,8 +63,8 @@ impl TeleMQServerConfigSrc {
         let config_file_content = read_file(&path)?;
         let config_file_extension = path.as_ref().extension().and_then(|os_str| os_str.to_str());
         let config_src: TeleMQServerConfigSrc = match config_file_extension {
-            Some(Self::FILE_TOML_EXTENSION) => toml_from_slice(config_file_content.as_slice())?,
-            Some(Self::FILE_JSON_EXTENSION) => json_from_slice(config_file_content.as_slice())?,
+            Some(Self::FILE_TOML_EXTENSION) => toml_from_str(&config_file_content)?,
+            Some(Self::FILE_JSON_EXTENSION) => json_from_str(&config_file_content)?,
             _ => {
                 unimplemented!();
             }
