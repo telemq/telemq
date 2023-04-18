@@ -150,89 +150,10 @@ impl Server {
         loop {
             select! {
               Ok((stream, addr)) = tcp_listener.accept() => {
-                let add_ip_net = IpNet::from(addr.ip());
-                let ip_allowed = self.config.ip_whitelist
-                    .as_ref()
-                    .map(|allowed_nets| {
-                        return !allowed_nets.is_empty()
-                            && allowed_nets.iter()
-                                .any(|allowed_net| allowed_net.contains(&add_ip_net))
-                    })
-                    .unwrap_or(true);
-                if !ip_allowed {
-                    continue;
-                }
-                let connections_number = self.connections_number.clone();
-                if connections_number.fetch_update(
-                    Ordering::SeqCst,
-                    Ordering::SeqCst,
-                    |prev_value| if prev_value >= self.config.max_connections {
-                        None
-                    } else {
-                        Some(prev_value + 1)
-                    }
-                ).is_err() {
-                    continue;
-                }
-                let authenticator = self.authenticator.clone();
-                let control_sender = self.control_sender.clone();
-                let stats_sender = self.stats_sender.clone();
-                let inactivity_interval = self.config.keep_alive.clone();
-                let state_store = self.state_store.clone();
-                let max_subs_per_client = self.config.max_subs_per_client.clone();
-                stream.set_ttl(self.config.keep_alive.as_secs() as u32)?;
-
-                spawn(async move {
-                    if let Err(err) = peer_process_tcp(
-                        stream,
-                        addr,
-                        control_sender,
-                        stats_sender,
-                        authenticator,
-                        inactivity_interval,
-                        state_store,
-                        max_subs_per_client
-                    ).await {
-                        error!("Could not add new TCP connection: {:?}: {:?}", addr, err);
-                    }
-                    connections_number.fetch_sub(1, Ordering::Relaxed);
-                });
+                on_accept_tcp(stream, addr, &self)?;
               }
               Ok((stream, addr)) = tls_listener.accept() => {
-                let connections_number = self.connections_number.clone();
-                if connections_number.fetch_update(
-                    Ordering::SeqCst,
-                    Ordering::SeqCst,
-                    |prev_value| if prev_value >= self.config.max_connections {
-                        None
-                    } else {
-                        Some(prev_value + 1)
-                    }
-                ).is_err() {
-                    continue;
-                }
-                let control_sender = self.control_sender.clone();
-                let stats_sender = self.stats_sender.clone();
-                let authenticator = self.authenticator.clone();
-                let inactivity_interval = self.config.keep_alive.clone();
-                let max_subs_per_client = self.config.max_subs_per_client.clone();
-                let state_store = self.state_store.clone();
-
-                spawn(async move {
-                    if let Err(err) = peer_process_tls(
-                        stream,
-                        addr,
-                        control_sender,
-                        stats_sender,
-                        authenticator,
-                        inactivity_interval,
-                        state_store,
-                        max_subs_per_client
-                    ).await {
-                        error!("Could not add new TCP connection: {:?}: {:?}", addr, err);
-                    }
-                    connections_number.fetch_sub(1, Ordering::SeqCst);
-                });
+                on_accept_tls(stream, addr, &self);
               }
               Some(signal) = signals.next() => {
                 if handle_os_signal(signal, self.control_sender.clone(), signals.handle()).await? {
@@ -249,6 +170,104 @@ impl Server {
             }
         }
     }
+}
+
+fn on_accept_tcp(stream: TcpStream, addr: SocketAddr, server: &Server) -> io::Result<()> {
+    let add_ip_net = IpNet::from(addr.ip());
+    let ip_allowed = server
+        .config
+        .ip_whitelist
+        .as_ref()
+        .map(|allowed_nets| {
+            return !allowed_nets.is_empty()
+                && allowed_nets
+                    .iter()
+                    .any(|allowed_net| allowed_net.contains(&add_ip_net));
+        })
+        .unwrap_or(true);
+    if !ip_allowed {
+        return Ok(());
+    }
+    let connections_number = server.connections_number.clone();
+    if connections_number
+        .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |prev_value| {
+            if prev_value >= server.config.max_connections {
+                None
+            } else {
+                Some(prev_value + 1)
+            }
+        })
+        .is_err()
+    {
+        return Ok(());
+    }
+    let authenticator = server.authenticator.clone();
+    let control_sender = server.control_sender.clone();
+    let stats_sender = server.stats_sender.clone();
+    let inactivity_interval = server.config.keep_alive.clone();
+    let state_store = server.state_store.clone();
+    let max_subs_per_client = server.config.max_subs_per_client.clone();
+    stream.set_ttl(server.config.keep_alive.as_secs() as u32)?;
+
+    spawn(async move {
+        if let Err(err) = peer_process_tcp(
+            stream,
+            addr,
+            control_sender,
+            stats_sender,
+            authenticator,
+            inactivity_interval,
+            state_store,
+            max_subs_per_client,
+        )
+        .await
+        {
+            error!("Could not add new TCP connection: {:?}: {:?}", addr, err);
+        }
+        connections_number.fetch_sub(1, Ordering::Relaxed);
+    });
+
+    Ok(())
+}
+
+fn on_accept_tls(stream: TlsStream<TcpStream>, addr: SocketAddr, server: &Server) -> () {
+    let connections_number = server.connections_number.clone();
+    if connections_number
+        .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |prev_value| {
+            if prev_value >= server.config.max_connections {
+                None
+            } else {
+                Some(prev_value + 1)
+            }
+        })
+        .is_err()
+    {
+        return;
+    }
+    let control_sender = server.control_sender.clone();
+    let stats_sender = server.stats_sender.clone();
+    let authenticator = server.authenticator.clone();
+    let inactivity_interval = server.config.keep_alive.clone();
+    let max_subs_per_client = server.config.max_subs_per_client.clone();
+    let state_store = server.state_store.clone();
+
+    spawn(async move {
+        if let Err(err) = peer_process_tls(
+            stream,
+            addr,
+            control_sender,
+            stats_sender,
+            authenticator,
+            inactivity_interval,
+            state_store,
+            max_subs_per_client,
+        )
+        .await
+        {
+            error!("Could not add new TCP connection: {:?}: {:?}", addr, err);
+        }
+        connections_number.fetch_sub(1, Ordering::SeqCst);
+    });
 }
 
 async fn peer_process_tcp(
