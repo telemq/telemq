@@ -17,7 +17,6 @@ plugin_types = { path = "../plugin_types", version = "0.1", features = ["authent
 authenticator_http = { path = "../authenticator_http", version = "0.1" }
 
 # 3rd party
-axum = "0.6.16"
 bytes = "1.0"
 clap = "3.0.0-beta.8"
 futures = { version = "0.3.0", features = ["thread-pool"]}
