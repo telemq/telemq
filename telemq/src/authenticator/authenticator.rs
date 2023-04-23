@@ -122,4 +122,11 @@ impl Authenticator {
             auth_file.remove_device(client_id);
         }
     }
+
+    pub async fn get_registered_devices(&self) -> Vec<String> {
+        self.auth_file
+            .as_ref()
+            .map(|auth_file| auth_file.get_registered_devices())
+            .unwrap_or(vec![])
+    }
 }

@@ -241,7 +241,7 @@ pub struct TeleMQServerConfig {
     pub auth_file: OptString,
     pub sys_topics_update_interval: Duration,
     pub session_state_store_url: OptSocketAddr,
-    pub admin_api: OptSocketAddr,
+    pub admin_api: SocketAddr,
     pub ip_whitelist: Option<Vec<IpNet>>,
 }
 
@@ -300,7 +300,7 @@ impl From<TeleMQServerConfigSrc> for TeleMQServerConfig {
                 })
                 .unwrap_or_else(|| Duration::from_secs(Self::DEFAULT_SYS_TOPICS_UPDATE_INTERVAL)),
             session_state_store_url: src.session_state_store_url.map(|url| url.parse().unwrap()),
-            admin_api: src.admin_api_port.map(|port| local_listener(port)),
+            admin_api: local_listener(src.admin_api_port.unwrap_or(Self::DEFAULT_ADMIN_API_PORT)),
             ip_whitelist: src.ip_whitelist.map(|ip_net_strs| {
                 ip_net_strs
                     .iter()
@@ -339,7 +339,7 @@ impl Default for TeleMQServerConfig {
                 Self::DEFAULT_SYS_TOPICS_UPDATE_INTERVAL,
             ),
             session_state_store_url: None,
-            admin_api: None,
+            admin_api: local_listener(Self::DEFAULT_ADMIN_API_PORT),
             ip_whitelist: None,
         }
     }
@@ -356,6 +356,7 @@ impl TeleMQServerConfig {
     pub const DEFAULT_LOG_LEVEL: &'static str = "info";
     pub const DEFAULT_ANONYMOUS_ALLOWED: bool = true;
     pub const DEFAULT_SYS_TOPICS_UPDATE_INTERVAL: u64 = 30;
+    pub const DEFAULT_ADMIN_API_PORT: u16 = 8088;
 
     pub fn from_file<P: AsRef<Path>>(path: P) -> ConfigResult<Self> {
         TeleMQServerConfigSrc::from_file(path).map(From::from)

@@ -110,6 +110,13 @@ impl AuthenticatorFile {
         }
     }
 
+    pub fn get_registered_devices(&self) -> Vec<String> {
+        self.credentials
+            .as_ref()
+            .map(|creds| creds.iter().map(|cred| cred.client_id.clone()).collect())
+            .unwrap_or(vec![])
+    }
+
     // false - not authorized to log in
     // true - authorized to log in
     pub fn login(
