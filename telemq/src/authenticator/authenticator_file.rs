@@ -239,9 +239,9 @@ pub struct ClientRulesSrc {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClientCredentials {
-    client_id: String,
-    username: String,
-    password: String,
+    pub client_id: String,
+    pub username: String,
+    pub password: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

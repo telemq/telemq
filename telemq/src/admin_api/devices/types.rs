@@ -21,3 +21,10 @@ pub enum DeviceOnlineStatus {
 pub struct ErrorResponse {
     pub error: String,
 }
+
+#[derive(serde::Deserialize, Debug)]
+pub struct DeviceRegisterRequest {
+    pub client_id: String,
+    pub username: String,
+    pub password: String,
+}

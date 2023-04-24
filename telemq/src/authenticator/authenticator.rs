@@ -8,7 +8,7 @@ use plugin_types::authenticator::{
 use super::{authenticator_error::AuthenticatorInitResult, authenticator_file::AuthenticatorFile};
 use crate::config::TeleMQServerConfig;
 
-pub use super::authenticator_file::{AccessType, ClientCredentials, ClientRules};
+pub use super::authenticator_file::{AccessType, ClientCredentials, ClientRules, TopicRule};
 
 impl From<&AccessType> for TopicAccess {
     fn from(ta: &AccessType) -> TopicAccess {
@@ -106,13 +106,16 @@ impl Authenticator {
     }
 
     #[allow(dead_code)]
-    pub async fn register_device(
-        &mut self,
-        credentials: ClientCredentials,
-        topic_rules: ClientRules,
-    ) {
+    pub async fn register_device(&mut self, credentials: ClientCredentials) {
         if let Some(ref mut auth_file) = self.auth_file {
-            auth_file.add_device(credentials, topic_rules);
+            let client_id = credentials.client_id.clone();
+            auth_file.add_device(
+                credentials,
+                ClientRules {
+                    client_id,
+                    topic_rules: vec![],
+                },
+            );
         }
     }
 

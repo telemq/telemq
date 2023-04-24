@@ -94,10 +94,13 @@ pub fn exec_command(matches: &ArgMatches) {
             render_result("Device List:", device_list());
         }
         Some(("register", register_args)) => {
-            device_register(
-                get_mandatory_arg(register_args, "id"),
-                get_mandatory_arg(register_args, "username"),
-                get_mandatory_arg(register_args, "password"),
+            render_result(
+                "Adding new device:",
+                device_register(
+                    get_mandatory_arg(register_args, "id"),
+                    get_mandatory_arg(register_args, "username"),
+                    get_mandatory_arg(register_args, "password"),
+                ),
             );
         }
         Some(("register-batch", register_bathc_args)) => {

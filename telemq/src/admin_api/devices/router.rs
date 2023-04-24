@@ -1,11 +1,13 @@
-use crate::admin_api::AdminAPIState;
+use crate::{admin_api::AdminAPIState, authenticator::ClientCredentials};
 use axum::{extract::State, http::StatusCode, routing::get, Json, Router};
 use std::{collections::HashSet, sync::Arc};
 
 use super::types::*;
 
 pub fn router(state: Arc<AdminAPIState>) -> Router {
-    Router::new().route("/", get(get_all)).with_state(state)
+    Router::new()
+        .route("/", get(get_all).post(register))
+        .with_state(state)
 }
 
 async fn get_all(
@@ -52,6 +54,24 @@ async fn get_all(
     });
 
     Ok((StatusCode::OK, Json(devices)))
+}
+
+async fn register(
+    State(state): State<Arc<AdminAPIState>>,
+    Json(input): Json<DeviceRegisterRequest>,
+) -> Result<StatusCode, (StatusCode, Json<ErrorResponse>)> {
+    state
+        .authenticator
+        .write()
+        .await
+        .register_device(ClientCredentials {
+            client_id: input.client_id,
+            username: input.username,
+            password: input.password,
+        })
+        .await;
+
+    Ok(StatusCode::CREATED)
 }
 
 fn err_to_response<E>(_err: E) -> (StatusCode, Json<ErrorResponse>) {

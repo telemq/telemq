@@ -1,3 +1,4 @@
+use crate::authenticator::TopicRule;
 use futures::future::Future;
 use log::error;
 use std::{
@@ -25,6 +26,13 @@ impl AdminApiInMessage {
 
 pub enum AdminApiOutMessage {
     OnlineDevicesList { req_id: Uuid },
+    // DeviceRegister {
+    //     req_id: Uuid,
+    //     client_id: String,
+    //     username: Option<String>,
+    //     password: Option<String>,
+    //     topics: Vec<TopicRule>,
+    // },
 }
 
 enum Response {
@@ -117,11 +125,9 @@ impl Future for GetDeviceRequest {
         if let Ok(mut reqs_mut) = self.requests.write() {
             match reqs_mut.remove(&self.id) {
                 Some(response_entry) => match response_entry {
-                    Response::Response(response) => match response {
-                        AdminApiInMessage::OnlineDevicesList { list, .. } => {
-                            std::task::Poll::Ready(Ok(list))
-                        } // _ => std::task::Poll::Ready(Err(RequestServiceError::TypesDontMatch)),
-                    },
+                    Response::Response(AdminApiInMessage::OnlineDevicesList { list, .. }) => {
+                        std::task::Poll::Ready(Ok(list))
+                    }
                     Response::Waker(_) => std::task::Poll::Pending,
                 },
                 None => {
