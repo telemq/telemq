@@ -52,10 +52,10 @@ use std::{
     process::exit,
 };
 
-#[tokio::main(worker_threads = 25)]
+#[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = parse_args();
-    let mut config = match args.value_of("CONFIG_FILE") {
+    let mut config = match args.get_one::<String>("CONFIG_FILE") {
         Some(config_file) => match TeleMQServerConfig::from_file(config_file) {
             Ok(c) => c,
             Err(err) => {
@@ -66,7 +66,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         None => TeleMQServerConfig::default(),
     };
 
-    if let Some(arg_port_str) = args.value_of("TCP_PORT") {
+    if let Some(arg_port_str) = args.get_one::<String>("TCP_PORT") {
         match arg_port_str.parse::<u16>() {
             Ok(port) => config.tcp_addr.set_port(port),
             Err(_) => {

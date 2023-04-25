@@ -110,6 +110,13 @@ impl AuthenticatorFile {
         }
     }
 
+    pub fn get_registered_devices(&self) -> Vec<String> {
+        self.credentials
+            .as_ref()
+            .map(|creds| creds.iter().map(|cred| cred.client_id.clone()).collect())
+            .unwrap_or(vec![])
+    }
+
     // false - not authorized to log in
     // true - authorized to log in
     pub fn login(
@@ -232,9 +239,9 @@ pub struct ClientRulesSrc {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ClientCredentials {
-    client_id: String,
-    username: String,
-    password: String,
+    pub client_id: String,
+    pub username: String,
+    pub password: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

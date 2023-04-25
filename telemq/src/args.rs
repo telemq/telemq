@@ -1,13 +1,13 @@
-use clap::{App, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 
 pub fn parse_args() -> ArgMatches {
-    App::new("TeleMQ - MQTT broker")
+    Command::new("TeleMQ - MQTT broker")
         .arg(
             Arg::new("CONFIG_FILE")
                 .short('c')
                 .long("config")
                 .help("TeleMQ configuration file")
-                .takes_value(true),
+                .value_name("FILE"),
         )
         .arg(
             Arg::new("TCP_PORT")

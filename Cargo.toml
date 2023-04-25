@@ -1,7 +1,9 @@
 [workspace]
 
 members = [
+  "admin_proto",
   "authenticator_http",
+  "cli",
   "mqtt-packets",
   "plugin_types",
   "telemq"
