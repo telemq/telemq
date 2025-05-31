@@ -52,7 +52,7 @@ use std::{
     process::exit,
 };
 
-#[tokio::main(worker_threads = 25)]
+#[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = parse_args();
     let mut config = match args.value_of("CONFIG_FILE") {
