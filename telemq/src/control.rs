@@ -1,4 +1,6 @@
+use crate::admin_api;
 use crate::{
+    admin_api::{AdminApiInMessage, AdminApiOutMessage},
     config::TeleMQServerConfig,
     connection::{ConnectionMessage, ConnectionSender},
     session_state_store::SessionStateStore,
@@ -12,7 +14,12 @@ use mqtt_packets::v_3_1_1::{
     variable::Variable,
     ControlPacket,
 };
-use std::{collections::HashMap, io, net::SocketAddr, sync::Arc};
+use std::{
+    collections::HashMap,
+    io,
+    net::{IpAddr, SocketAddr},
+    sync::Arc,
+};
 use tokio::{
     select,
     sync::{
@@ -73,16 +80,25 @@ pub type ControlReceiver = UnboundedReceiver<ControlMessage>;
 
 type ClientId = String;
 
+#[derive(Debug, Clone)]
+struct ClientInfo {
+    pub id: ClientId,
+    pub ip: IpAddr,
+}
+
 // TODO: add retained messages max number to remove old ones
 #[derive(Debug)]
 pub struct Control {
     receiver: ControlReceiver,
     connections: HashMap<ClientId, ConnectionSender>,
+    connections_info: HashMap<ClientId, ClientInfo>,
     subscription_tree: SubscriptionTree,
     retained_messages: Vec<(Topic, ControlPacket)>,
     state_store: Arc<RwLock<SessionStateStore>>,
     is_shutting_down: bool,
     shut_down_channel: Sender<()>,
+    admin_api_response_sender: admin_api::AdminApiResponseSender,
+    admin_api_request_receiver: admin_api::AdminApiRequestReceiver,
 }
 
 impl Control {
@@ -90,18 +106,23 @@ impl Control {
         config: &TeleMQServerConfig,
         state_store: Arc<RwLock<SessionStateStore>>,
         shut_down_channel: Sender<()>,
+        admin_api_response_sender: admin_api::AdminApiResponseSender,
+        admin_api_request_receiver: admin_api::AdminApiRequestReceiver,
     ) -> (Self, ControlSender) {
         let (tx, rx) = unbounded_channel();
         (
             Control {
                 receiver: rx,
                 connections: HashMap::with_capacity(config.max_connections),
+                connections_info: HashMap::with_capacity(config.max_connections),
                 subscription_tree: SubscriptionTree::from_session_state_store(state_store.clone())
                     .await,
                 retained_messages: vec![],
                 state_store,
                 is_shutting_down: false,
                 shut_down_channel,
+                admin_api_request_receiver,
+                admin_api_response_sender,
             },
             tx,
         )
@@ -112,8 +133,8 @@ impl Control {
             select! {
               Some(control_message) = self.receiver.recv() => {
                 match control_message {
-                  ControlMessage::ClientConnected{sender, client_id, clean_session, ..} => {
-                    self.on_add_connection(sender, client_id, clean_session).await;
+                  ControlMessage::ClientConnected{sender, client_id, clean_session, addr} => {
+                    self.on_add_connection(sender, client_id, clean_session, addr).await;
                   },
                   ControlMessage::AddSubscriptions{subscriptions, client_id, .. } => {
                     self.on_add_subscriptions(client_id, subscriptions).await;
@@ -131,6 +152,15 @@ impl Control {
                     self.on_shut_down().await;
                   }
                 }
+              },
+              Some(admin_api_request) = self.admin_api_request_receiver.recv() => {
+                match admin_api_request {
+                    AdminApiOutMessage::OnlineDevicesList{req_id} => {
+                        if let Err(err) = self.admin_api_response_sender.send(AdminApiInMessage::OnlineDevicesList { req_id, list: self.get_online_device_list().await }) {
+                            error!("[Control Worker] Unable to respond to Admin API. {:?}", err.to_string());
+                        }
+                    }
+                }
               }
             }
         }
@@ -141,6 +171,7 @@ impl Control {
         sender: ConnectionSender,
         client_id: String,
         clean_session: bool,
+        addr: SocketAddr,
     ) {
         if clean_session {
             self.subscription_tree.disconnect_subscriber(&client_id);
@@ -160,7 +191,14 @@ impl Control {
                 );
             }
         }
-        self.connections.insert(client_id, sender);
+        self.connections.insert(client_id.clone(), sender);
+        self.connections_info.insert(
+            client_id.clone(),
+            ClientInfo {
+                id: client_id,
+                ip: addr.ip(),
+            },
+        );
     }
 
     async fn on_add_subscriptions(
@@ -216,6 +254,7 @@ impl Control {
             self.subscription_tree.disconnect_subscriber(&client_id);
         }
         self.connections.remove(&client_id);
+        self.connections_info.remove(&client_id);
 
         if self.connections.is_empty() && self.is_shutting_down {
             if let Err(err) = self.state_store.read().await.commit().await {
@@ -309,5 +348,13 @@ impl Control {
                 }
             }
         }
+    }
+
+    async fn get_online_device_list(&self) -> admin_api::OnlineDevices {
+        self.connections_info
+            .values()
+            .cloned()
+            .map(|ClientInfo { id, ip }| (id, ip))
+            .collect()
     }
 }

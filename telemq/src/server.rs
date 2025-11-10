@@ -47,6 +47,7 @@ pub struct Server {
     state_store: Arc<RwLock<SessionStateStore>>,
     shut_down_channel: Receiver<()>,
     connections_number: Arc<AtomicUsize>,
+    admin_api: Option<admin_api::AdminAPI>,
 }
 
 impl Server {
@@ -54,8 +55,24 @@ impl Server {
         let (shutdown_sender, shutdown_receiver) = channel(1);
         let state_store = Arc::new(RwLock::new(SessionStateStore::new()));
 
-        let (control, control_sender) =
-            Control::new(&config, state_store.clone(), shutdown_sender).await;
+        let authenticator = Arc::new(RwLock::new(Authenticator::new(&config).ok()?));
+
+        let (admin_api_response_sender, admin_api_response_receiver) =
+            admin_api::create_inbound_channel();
+        let (admin_api, admin_api_request_receiver) = admin_api::AdminAPI::new(
+            config.admin_api.clone(),
+            admin_api_response_receiver,
+            authenticator.clone(),
+        );
+
+        let (control, control_sender) = Control::new(
+            &config,
+            state_store.clone(),
+            shutdown_sender,
+            admin_api_response_sender,
+            admin_api_request_receiver,
+        )
+        .await;
         spawn(async move {
             if let Err(err) = control.run().await {
                 error!("[Control Worker]: finished with error {:?}", err);
@@ -72,8 +89,6 @@ impl Server {
             }
         });
 
-        let authenticator = Arc::new(RwLock::new(Authenticator::new(&config).ok()?));
-
         Some(Server {
             control_sender,
             stats_sender,
@@ -82,10 +97,19 @@ impl Server {
             state_store,
             shut_down_channel: shutdown_receiver,
             connections_number: Arc::new(AtomicUsize::new(0)),
+            admin_api: Some(admin_api),
         })
     }
 
     pub async fn start(mut self) -> ServerResult<()> {
+        // Admin API is inited in Server::new
+        let admin_api = self.admin_api.take().unwrap();
+        spawn(async move {
+            if let Err(err) = admin_api.run().await {
+                error!("[Admin API Error]: {err:?}");
+            }
+        });
+
         let tcp_listener = TcpListener::bind(&self.config.tcp_addr).await?;
         println!("TCP Listener is listening on {:?}", self.config.tcp_addr);
 
@@ -138,14 +162,6 @@ impl Server {
         }
 
         let mut signals = Signals::new(&[SIGHUP, SIGTERM, SIGINT, SIGQUIT])?;
-
-        if let Some(admin_api_origin) = self.config.admin_api {
-            // let stats = self.stats.clone();
-            // let authenticator = self.authenticator.clone();
-            spawn(async move {
-                admin_api::run(admin_api_origin).await;
-            });
-        }
 
         loop {
             select! {
