@@ -1,8 +1,8 @@
-use crate::v_3_1_1::basic_variable::Variable as BasicVariable;
-use crate::v_3_1_1::cp_fixed_header::FixedHeader;
-use crate::v_3_1_1::variable::Variable;
-use crate::v_3_1_1::PacketId;
-use crate::v_3_1_1::{CPRemLen, CPType, ControlPacket, Flag};
+use crate::v311::basic_variable::Variable as BasicVariable;
+use crate::v311::cp_fixed_header::FixedHeader;
+use crate::v311::variable::Variable;
+use crate::v311::PacketId;
+use crate::v311::{CPRemLen, CPType, ControlPacket, Flag};
 
 pub struct PubackPacketBuilder {
     packet: ControlPacket,

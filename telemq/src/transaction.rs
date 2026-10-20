@@ -1,6 +1,6 @@
 use std::time;
 
-use mqtt_packets::v_3_1_1::{publish::fixed_header::get_qos_level, ControlPacket, PacketId, QoS};
+use mqtt_packets::v311::{publish::fixed_header::get_qos_level, ControlPacket, PacketId, QoS};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::session_error::{SessionError, SessionErrorKind, SessionResult};

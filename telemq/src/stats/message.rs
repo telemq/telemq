@@ -1,4 +1,4 @@
-use mqtt_packets::v_3_1_1::ControlPacket;
+use mqtt_packets::v311::ControlPacket;
 use std::net::SocketAddr;
 
 #[derive(Debug)]

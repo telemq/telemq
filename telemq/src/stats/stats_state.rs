@@ -87,7 +87,7 @@ impl StatsStateInner {
     }
 
     fn on_client_connected(&mut self, client_id: String) {
-        self.clients_online.insert(client_id);
+        self.clients_online.insert(client_id.to_string());
         let currently_clients = self.clients_online.len() as u128;
 
         if let Some(v) = self.metrics.get_mut(Self::BROKER_CLIENTS_CONNECTED) {

@@ -1,7 +1,7 @@
-use crate::v_3_1_1::cp_fixed_header::FixedHeader;
-use crate::v_3_1_1::variable::Variable;
-use crate::v_3_1_1::Flag;
-use crate::v_3_1_1::{CPRemLen, CPType, ControlPacket};
+use crate::v311::cp_fixed_header::FixedHeader;
+use crate::v311::variable::Variable;
+use crate::v311::Flag;
+use crate::v311::{CPRemLen, CPType, ControlPacket};
 
 pub struct PingrespPacketBuilder {
     packet: ControlPacket,

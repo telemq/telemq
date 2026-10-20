@@ -1,9 +1,9 @@
 //! This module contains helper methods for working with fixed
 //! header values specific for Publish control packet.
 
-use crate::v_3_1_1::cp_fixed_header::FixedHeader;
-use crate::v_3_1_1::cp_flag::Flag;
-use crate::v_3_1_1::{CPType, QoS};
+use crate::v311::cp_fixed_header::FixedHeader;
+use crate::v311::cp_flag::Flag;
+use crate::v311::{CPType, QoS};
 
 const DUP_MASK: u8 = 0b00001000;
 const QOS_MASK: u8 = 0b00000110;
@@ -68,10 +68,10 @@ pub fn set_retained(fixed_header: &mut FixedHeader, is_retained: bool) {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::v_3_1_1::cp_fixed_header::FixedHeader;
-    use crate::v_3_1_1::CPRemLen;
-    use crate::v_3_1_1::CPType;
-    use crate::v_3_1_1::Flag;
+    use crate::v311::cp_fixed_header::FixedHeader;
+    use crate::v311::CPRemLen;
+    use crate::v311::CPType;
+    use crate::v311::Flag;
 
     #[test]
     fn test_is_dup() {

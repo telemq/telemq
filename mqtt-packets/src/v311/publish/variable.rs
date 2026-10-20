@@ -1,8 +1,8 @@
 use bytes::BytesMut;
 
-use crate::v_3_1_1::topic::Topic;
-use crate::v_3_1_1::utils::codec as codec_utils;
-use crate::v_3_1_1::QoS;
+use crate::v311::topic::Topic;
+use crate::v311::utils::codec as codec_utils;
+use crate::v311::QoS;
 
 use super::super::packet_id::PacketId;
 

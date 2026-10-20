@@ -1,6 +1,6 @@
 use crate::session_state::SessionConnectedState;
 use log::{error, info};
-use mqtt_packets::v_3_1_1::ControlPacket;
+use mqtt_packets::v311::ControlPacket;
 use serde_json::{from_reader, to_vec};
 use std::{
     collections::HashMap,

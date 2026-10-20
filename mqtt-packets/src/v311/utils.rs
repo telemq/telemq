@@ -136,7 +136,7 @@ pub mod codec {
 }
 
 pub mod getters_setters {
-    use crate::v_3_1_1::{packet_id::PacketId, variable::Variable};
+    use crate::v311::{packet_id::PacketId, variable::Variable};
     use std::io;
 
     pub fn get_packet_id(variable: &Variable) -> Option<&PacketId> {

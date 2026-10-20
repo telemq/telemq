@@ -49,10 +49,10 @@ impl Authenticator {
 
     pub async fn connect(
         &self,
-        socket_addr: SocketAddr,
-        client_id: String,
-        username: Option<String>,
-        password: Option<String>,
+        socket_addr: &SocketAddr,
+        client_id: &String,
+        username: &Option<String>,
+        password: &Option<String>,
     ) -> AuthenticatorResult<LoginResponse> {
         let connection_allowed = match self.auth_file {
             Some(ref auth_file) => auth_file.login(socket_addr, &client_id, username, password),
@@ -60,7 +60,7 @@ impl Authenticator {
                 Some(ref addr) => {
                     let req = LoginRequest {
                         socket_addr: &format!("{}", socket_addr),
-                        client_id: &client_id,
+                        client_id: client_id,
                         username: &username,
                         password: &password,
                     };

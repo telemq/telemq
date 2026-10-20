@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use mqtt_packets::v_3_1_1::{topic::Topic, QoS};
+use mqtt_packets::v311::{topic::Topic, QoS};
 
-pub struct SessionConnectionProvider {
-    pub client_id: String,
+pub struct SessionConnectionProvider<'a> {
+    pub client_id: &'a String,
     pub clean_session: bool,
-    pub will_topic: Option<Topic>,
-    pub will_message: Option<Vec<u8>>,
-    pub will_qos: Option<QoS>,
+    pub will_topic: &'a mut Option<Topic>,
+    pub will_message: &'a mut Option<Vec<u8>>,
+    pub will_qos: &'a mut Option<QoS>,
 }

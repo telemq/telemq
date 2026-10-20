@@ -5,7 +5,7 @@ use std::{
 use tokio::sync::RwLock;
 
 use crate::session_state_store::SessionStateStore;
-use mqtt_packets::v_3_1_1::topic::{SINGLE_LEVEL_WILD_CARD, WILD_CARD};
+use mqtt_packets::v311::topic::{SINGLE_LEVEL_WILD_CARD, SYSTEM_PREFIX, WILD_CARD};
 
 type PathStep = String;
 type ClientID = String;
@@ -37,7 +37,7 @@ impl SubscriptionTree {
 
     pub fn find_subscribers(&self, subscription: &[PathStep]) -> HashSet<ClientID> {
         let mut acc = HashSet::new();
-        self.0.find(subscription, &mut acc);
+        self.0.find(subscription, &mut acc, true);
 
         acc
     }
@@ -118,7 +118,7 @@ impl SubscriptionNode {
         }
     }
 
-    fn find(&self, path: &[PathStep], acc: &mut HashSet<ClientID>) {
+    fn find(&self, path: &[PathStep], acc: &mut HashSet<ClientID>, is_root: bool) {
         if path.is_empty() {
             // bug?
             return;
@@ -129,11 +129,20 @@ impl SubscriptionNode {
             Some(ref node) => {
                 if path.len() == 1 {
                     *acc = &*acc | &node.connections;
+                    // "a/#" also matches "a" [MQTT-4.7.1-2]
+                    if let Some(ref wildcard_node) = node.children.get(WILD_CARD) {
+                        *acc = &*acc | &wildcard_node.connections;
+                    }
                 } else {
-                    node.find(path.split_at(1).1, acc);
+                    node.find(path.split_at(1).1, acc, false);
                 }
             }
             None => {}
+        }
+
+        // wildcards at the first level do not match topics starting with "$" [MQTT-4.7.2-1]
+        if is_root && path[0].starts_with(SYSTEM_PREFIX) {
+            return;
         }
 
         // single level match
@@ -141,8 +150,12 @@ impl SubscriptionNode {
             Some(ref node) => {
                 if path.len() == 1 {
                     *acc = &*acc | &node.connections;
+                    // "+/#" also matches "a"
+                    if let Some(ref wildcard_node) = node.children.get(WILD_CARD) {
+                        *acc = &*acc | &wildcard_node.connections;
+                    }
                 } else {
-                    node.find(path.split_at(1).1, acc);
+                    node.find(path.split_at(1).1, acc, false);
                 }
             }
             None => {}
@@ -162,7 +175,7 @@ impl SubscriptionNode {
 mod tests {
     use super::*;
     use maplit::hashmap;
-    use mqtt_packets::v_3_1_1::topic::Subscription;
+    use mqtt_packets::v311::topic::{Subscription, Topic};
 
     fn new_tree() -> SubscriptionTree {
         SubscriptionTree(SubscriptionNode::new())
@@ -344,6 +357,44 @@ mod tests {
             tree.add_subscriber(&sub_2, make_addr(5));
 
             tree.remove_subscriber(&sub_1, make_addr(3));
+        }
+    }
+
+    #[test]
+    fn find_subscribers_matching_rules() {
+        // (subscription, matching topics, non-matching topics)
+        let cases = vec![
+            ("#", vec!["a", "a/b"], vec!["$SYS", "$SYS/broker"]),
+            ("+/broker", vec!["a/broker"], vec!["$SYS/broker"]),
+            ("$SYS/#", vec!["$SYS", "$SYS/broker"], vec!["SYS/broker"]),
+            ("sport/#", vec!["sport", "sport/tennis"], vec!["sports"]),
+        ];
+
+        for (subscription, positive, negative) in cases {
+            let mut tree = new_tree();
+            let sub = Subscription::try_from(subscription).unwrap();
+            tree.add_subscriber(&sub.path, make_addr(1));
+
+            for topic in positive {
+                let topic = Topic::try_from(topic).unwrap();
+                assert_eq!(
+                    tree.find_subscribers(&topic.path),
+                    make_hash_set(vec![make_addr(1)]),
+                    "{:?} should match {:?}",
+                    subscription,
+                    topic.original
+                );
+            }
+
+            for topic in negative {
+                let topic = Topic::try_from(topic).unwrap();
+                assert!(
+                    tree.find_subscribers(&topic.path).is_empty(),
+                    "{:?} should not match {:?}",
+                    subscription,
+                    topic.original
+                );
+            }
         }
     }
 }

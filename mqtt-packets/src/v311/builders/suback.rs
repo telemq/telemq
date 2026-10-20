@@ -1,8 +1,8 @@
-use crate::v_3_1_1::cp_fixed_header::FixedHeader;
-use crate::v_3_1_1::suback::{return_code::ReturnCode, variable::Variable as SubackVariable};
-use crate::v_3_1_1::variable::Variable;
-use crate::v_3_1_1::{CPRemLen, CPType, ControlPacket, Flag};
-use crate::v_3_1_1::{PacketId, PACKET_ID_LEN};
+use crate::v311::cp_fixed_header::FixedHeader;
+use crate::v311::suback::{return_code::ReturnCode, variable::Variable as SubackVariable};
+use crate::v311::variable::Variable;
+use crate::v311::{CPRemLen, CPType, ControlPacket, Flag};
+use crate::v311::{PacketId, PACKET_ID_LEN};
 
 pub struct SubackPacketBuilder {
     packet: ControlPacket,

@@ -3,7 +3,7 @@ use crate::{
   session_state_store::SessionStateStore, stats::StatsSender,
 };
 use log::{error, info};
-use mqtt_packets::v_3_1_1::ControlPacketCodec;
+use mqtt_packets::v311::ControlPacketCodec;
 use std::{
   net::SocketAddr,
   sync::{

@@ -1,10 +1,10 @@
-use crate::v_3_1_1::cp_fixed_header::FixedHeader;
-use crate::v_3_1_1::publish::fixed_header::{set_dup, set_qos_level, set_retained};
-use crate::v_3_1_1::publish::variable::Variable as PublishVariable;
-use crate::v_3_1_1::topic::Topic;
-use crate::v_3_1_1::variable::Variable;
-use crate::v_3_1_1::PacketId;
-use crate::v_3_1_1::{CPRemLen, CPType, ControlPacket, Flag, QoS};
+use crate::v311::cp_fixed_header::FixedHeader;
+use crate::v311::publish::fixed_header::{set_dup, set_qos_level, set_retained};
+use crate::v311::publish::variable::Variable as PublishVariable;
+use crate::v311::topic::Topic;
+use crate::v311::variable::Variable;
+use crate::v311::PacketId;
+use crate::v311::{CPRemLen, CPType, ControlPacket, Flag, QoS};
 
 pub struct PublishPacketBuilder {
     packet: ControlPacket,

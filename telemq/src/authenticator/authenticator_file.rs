@@ -3,7 +3,7 @@ use std::{fs::read_to_string as read_file, net::SocketAddr, path::Path};
 use crypto::{digest::Digest, sha2::Sha256};
 use ipnet::IpNet;
 use log::error;
-use mqtt_packets::v_3_1_1::topic::Topic;
+use mqtt_packets::v311::topic::Topic;
 use serde::{Deserialize, Serialize};
 use toml::from_str;
 
@@ -114,10 +114,10 @@ impl AuthenticatorFile {
     // true - authorized to log in
     pub fn login(
         &self,
-        socket_addr: SocketAddr,
+        socket_addr: &SocketAddr,
         client_id: &String,
-        maybe_username: Option<String>,
-        maybe_password: Option<String>,
+        maybe_username: &Option<String>,
+        maybe_password: &Option<String>,
     ) -> bool {
         let ip_net_addr = IpNet::from(socket_addr.ip());
         let blacklisted = self
@@ -170,7 +170,7 @@ impl AuthenticatorFile {
                     .iter()
                     .find(|credentials_entry| {
                         &credentials_entry.client_id == client_id
-                            && credentials_entry.username == username
+                            && credentials_entry.username == *username
                             && password_hash == credentials_entry.password
                     })
                     .is_some();

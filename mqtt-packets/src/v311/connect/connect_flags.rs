@@ -1,4 +1,4 @@
-use crate::v_3_1_1::QoS;
+use crate::v311::QoS;
 
 use bytes::{BufMut, BytesMut};
 

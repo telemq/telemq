@@ -1,15 +1,15 @@
-use crate::v_3_1_1::cp_fixed_header::FixedHeader;
-use crate::v_3_1_1::cp_flag::Flag;
-use crate::v_3_1_1::cp_rem_len::CPRemLen;
-use crate::v_3_1_1::cp_type::CPType;
-use crate::v_3_1_1::ControlPacket;
+use crate::v311::cp_fixed_header::FixedHeader;
+use crate::v311::cp_flag::Flag;
+use crate::v311::cp_rem_len::CPRemLen;
+use crate::v311::cp_type::CPType;
+use crate::v311::ControlPacket;
 
-use crate::v_3_1_1::connect::connect_flags::ConnectFlags;
-use crate::v_3_1_1::connect::keep_alive::KeepAlive;
-use crate::v_3_1_1::connect::protocol_level::ProtocolLevel;
-use crate::v_3_1_1::connect::protocol_name::ProtocolName;
-use crate::v_3_1_1::connect::variable::Variable as ConnectVariable;
-use crate::v_3_1_1::variable::Variable;
+use crate::v311::connect::connect_flags::ConnectFlags;
+use crate::v311::connect::keep_alive::KeepAlive;
+use crate::v311::connect::protocol_level::ProtocolLevel;
+use crate::v311::connect::protocol_name::ProtocolName;
+use crate::v311::connect::variable::Variable as ConnectVariable;
+use crate::v311::variable::Variable;
 
 /// Connack Control Packet builder. Default Control Packet is of type Connack,
 /// with remaining_length 0, with `Flags::SessionNotPresent` flag and

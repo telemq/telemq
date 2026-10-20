@@ -1,27 +1,27 @@
 use bytes::BytesMut;
 
-use crate::v_3_1_1::basic_variable::{
+use crate::v311::basic_variable::{
     Variable as BasicVariable, VariableCodec as BasicVariableCodec,
 };
-use crate::v_3_1_1::connack::variable::{
+use crate::v311::connack::variable::{
     Variable as ConnackVariable, VariableCodec as ConnackVariableCodec,
 };
-use crate::v_3_1_1::connect::variable::{
+use crate::v311::connect::variable::{
     Variable as ConnectVariable, VariableCodec as ConnectVariableCodec,
 };
-use crate::v_3_1_1::cp_flag::Flag;
-use crate::v_3_1_1::cp_type::CPType;
-use crate::v_3_1_1::publish::{
+use crate::v311::cp_flag::Flag;
+use crate::v311::cp_type::CPType;
+use crate::v311::publish::{
     fixed_header::get_qos_level_from_flag,
     variable::{Variable as PublishVariable, VariableCodec as PublishVariableCodec},
 };
-use crate::v_3_1_1::suback::variable::{
+use crate::v311::suback::variable::{
     Variable as SubackVariable, VariableCodec as SubackVariableCodec,
 };
-use crate::v_3_1_1::subscribe::variable::{
+use crate::v311::subscribe::variable::{
     Variable as SubscribeVariable, VariableCodec as SubscribeVariableCodec,
 };
-use crate::v_3_1_1::unsubscribe::variable::{
+use crate::v311::unsubscribe::variable::{
     Variable as UnsubscribeVariable, VariableCodec as UnsubscribeVariableCodec,
 };
 

@@ -158,7 +158,13 @@ pub fn topics_match(left: &Vec<String>, right: &Vec<String>) -> bool {
         }
     }
 
-    true
+    // the topic is exhausted; only a trailing "#" may remain in the filter, since it
+    // also matches the parent level [MQTT-4.7.1-2]
+    match &right[left.len()..] {
+        [] => true,
+        [last] => last == WILD_CARD,
+        _ => false,
+    }
 }
 
 #[cfg(test)]
@@ -339,8 +345,9 @@ mod subscription_tests {
             (
                 "abc/+",
                 vec!["abc/def", "abc/xyz"],
-                vec!["ab/xyz", "bc/xyz", "abc/def/ghi"],
+                vec!["ab/xyz", "bc/xyz", "abc/def/ghi", "abc"],
             ),
+            ("abc/def", vec!["abc/def"], vec!["abc", "abc/def/ghi"]),
             (
                 "+/+",
                 vec!["a/b", "c/d", "/x", "/y", "x/", "y/"],
