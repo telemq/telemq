@@ -1,0 +1,15 @@
+# Auth file for the Paho compliance suite.
+#
+# No [[credentials]] here: defining any credentials disables anonymous logins,
+# and the Paho client never sends a username.
+#
+# Only topic_client_rules are enforced (per client ID), and the first matching
+# rule wins, so the Deny rule must come before "#". test_subscribe_failure
+# subscribes as "myclientid" and expects SUBACK 0x80 for "test/nosubscribe".
+
+[[topic_client_rules]]
+client_id = "myclientid"
+topic_rules = [
+  {access = "Deny", topic = "test/nosubscribe"},
+  {access = "ReadWrite", topic = "#"},
+]
