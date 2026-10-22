@@ -1,0 +1,33 @@
+# Auth file for the Paho compliance suite.
+#
+# No [[credentials]] here: defining any credentials disables anonymous logins,
+# and the Paho client never sends a username.
+#
+# Once an auth file is set, a client ID without topic_client_rules gets an
+# empty ACL and may neither publish nor subscribe (topic_all_rules is not
+# enforced), so every client ID the suite uses needs an entry. The first
+# matching rule wins, so a Deny rule must come before "#". "#" does not match
+# topics starting with "$" [MQTT-4.7.2-1], so test_dollar_topics needs its own
+# "$TopicA/#" rule.
+
+# test_subscribe_failure subscribes as "myclientid" and expects SUBACK 0x80
+# for "test/nosubscribe".
+[[topic_client_rules]]
+client_id = "myclientid"
+topic_rules = [
+  {access = "Deny", topic = "test/nosubscribe"},
+  {access = "ReadWrite", topic = "#"},
+  {access = "ReadWrite", topic = "$TopicA/#"},
+]
+
+[[topic_client_rules]]
+client_id = "myclientid2"
+topic_rules = [
+  {access = "ReadWrite", topic = "#"},
+  {access = "ReadWrite", topic = "$TopicA/#"},
+]
+
+# Used by the suite's cleanup to clear retained messages.
+[[topic_client_rules]]
+client_id = "clean retained"
+topic_rules = [{access = "ReadWrite", topic = "#"}]

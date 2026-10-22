@@ -1,0 +1,20 @@
+# TeleMQ config for the Eclipse Paho MQTT 3.1.1 compliance suite
+# (paho.mqtt.testing/interoperability/client_test.py).
+#
+# setup.sh starts the broker from this directory, so relative paths below
+# resolve against tests/compliance. The TCP port is passed on the command
+# line (TELEMQ_PORT, default 1883).
+
+broker_id = "compliance-broker"
+cluster_id = "compliance-cluster"
+account_id = "compliance-account"
+
+# The Paho client connects without username/password.
+anonymous_allowed = true
+
+# Needed by test_subscribe_failure: denies "test/nosubscribe" so the broker
+# answers SUBACK with 0x80.
+auth_file = "./auth.toml"
+
+log_level = "info"
+log_dest = "stdout"
