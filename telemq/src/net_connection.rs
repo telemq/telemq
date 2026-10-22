@@ -2,7 +2,7 @@ use std::io;
 
 use bytes::BytesMut;
 use futures::{SinkExt, StreamExt};
-use mqtt_packets::v_3_1_1::{ControlPacket, ControlPacketCodec};
+use mqtt_packets::v311::{ControlPacket, ControlPacketCodec};
 use tokio::net::TcpStream;
 use tokio_rustls::server::TlsStream;
 use tokio_util::codec::{Decoder, Encoder, Framed};
@@ -94,6 +94,22 @@ impl NetConnection {
                         }),
                     err => err,
                 }
+            }
+        }
+    }
+
+    pub async fn shutdown(&mut self) {
+        match self {
+            NetConnection::Tcp(ref mut stream) => {
+                let _ = stream.close().await;
+            }
+            NetConnection::Tls(ref mut stream) => {
+                let _ = stream.close().await;
+            }
+            NetConnection::Ws {
+                ref mut websocket, ..
+            } => {
+                let _ = websocket.close().await;
             }
         }
     }

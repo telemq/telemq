@@ -53,7 +53,7 @@ wss_port = 1881
 
 ### `keep_alive`
 
-**`keep_alive`** - a keep alive interval (in seconds). A connection should send at least one control packet during this interval, otherwise TeleMQ will close a connection due to inactivity. According to MQTT spec `PINGREQ` packets should be used by a client to indicate that it is still alive to prolongue a connection. Default value is 120 seconds.
+**`keep_alive`** - a keep alive interval (in seconds). A connection should send at least one control packet during this interval, otherwise TeleMQ will close a connection due to inactivity. According to MQTT spec `PINGREQ` packets should be used by a client to indicate that it is still alive to prolongue a connection. This interval applies before a `CONNECT` packet is received and to clients that connect with a zero keep alive; clients that set a non-zero keep alive in `CONNECT` are disconnected after one and a half times their own keep alive, as the MQTT spec requires. Default value is 120 seconds.
 
 Example:
 

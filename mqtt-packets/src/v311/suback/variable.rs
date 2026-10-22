@@ -1,7 +1,7 @@
 use bytes::BytesMut;
 
 use super::return_code::ReturnCode;
-use crate::v_3_1_1::PacketId;
+use crate::v311::PacketId;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Variable {

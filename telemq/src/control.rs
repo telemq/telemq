@@ -6,8 +6,8 @@ use crate::{
 };
 use futures::future::join_all;
 use log::{error, info};
-use mqtt_packets::v_3_1_1::{
-    publish::fixed_header::is_retained,
+use mqtt_packets::v311::{
+    publish::fixed_header::{is_retained, set_retained},
     topic::{Subscription, Topic},
     variable::Variable,
     ControlPacket,
@@ -79,7 +79,8 @@ pub struct Control {
     receiver: ControlReceiver,
     connections: HashMap<ClientId, ConnectionSender>,
     subscription_tree: SubscriptionTree,
-    retained_messages: Vec<(Topic, ControlPacket)>,
+    // the last retained message per topic name [MQTT-3.3.1-5]
+    retained_messages: HashMap<String, (Topic, ControlPacket)>,
     state_store: Arc<RwLock<SessionStateStore>>,
     is_shutting_down: bool,
     shut_down_channel: Sender<()>,
@@ -98,7 +99,7 @@ impl Control {
                 connections: HashMap::with_capacity(config.max_connections),
                 subscription_tree: SubscriptionTree::from_session_state_store(state_store.clone())
                     .await,
-                retained_messages: vec![],
+                retained_messages: HashMap::new(),
                 state_store,
                 is_shutting_down: false,
                 shut_down_channel,
@@ -147,19 +148,19 @@ impl Control {
             let _ = self.state_store.write().await.take_state(&client_id).await;
         }
 
-        if let Some(connected_client_sender) = self.connections.remove(&client_id) {
-            // there is already a connected client with the same id
-            // disconnect it
-            info!("Disconnecting already connected client {:?}", client_id);
-            let message = ConnectionMessage::Disconnect;
-            let message_type = message.get_name();
-            if let Err(err) = connected_client_sender.send(message) {
-                error!(
-                    "[Control Worker]: Unable to send {} to {:?}. {:?}",
-                    message_type, client_id, err
-                );
-            }
-        }
+//        if let Some(connected_client_sender) = self.connections.remove(&client_id) {
+//            // there is already a connected client with the same id
+//            // disconnect it
+//            info!("Disconnecting already connected client {:?}", client_id);
+//            let message = ConnectionMessage::Disconnect;
+//            let message_type = message.get_name();
+//            if let Err(err) = connected_client_sender.send(message) {
+//                error!(
+//                    "[Control Worker]: Unable to send {} to {:?}. {:?}",
+//                    message_type, client_id, err
+//                );
+//            }
+//        }
         self.connections.insert(client_id, sender);
     }
 
@@ -179,12 +180,15 @@ impl Control {
 
         let mut futs = Vec::new();
         for sub in &subscriptions {
-            for (topic, publish_packet) in &self.retained_messages {
+            for (topic, publish_packet) in self.retained_messages.values() {
                 if sub.topic_matches(&topic) {
+                    // sent as a result of a new subscription [MQTT-3.3.1-8]
+                    let mut packet = publish_packet.clone();
+                    set_retained(&mut packet.fixed_header, true);
                     futs.push(self.inform_connection(
                         client_id.clone(),
                         ConnectionMessage::Publish {
-                            packet: publish_packet.clone(),
+                            packet,
                             retained_for: Some(sub.original.clone()),
                         },
                     ));
@@ -215,7 +219,9 @@ impl Control {
         if clean_session {
             self.subscription_tree.disconnect_subscriber(&client_id);
         }
-        self.connections.remove(&client_id);
+        if let Some(conn) = self.connections.remove(&client_id) {
+            drop(conn);
+        }
 
         if self.connections.is_empty() && self.is_shutting_down {
             if let Err(err) = self.state_store.read().await.commit().await {
@@ -235,9 +241,21 @@ impl Control {
         let topic = &variable.topic_name;
 
         if is_retained(&control_packet.fixed_header) {
-            self.retained_messages
-                .push((topic.clone(), control_packet.clone()));
+            if variable.payload.is_empty() {
+                // a zero-byte retained message clears the topic [MQTT-3.3.1-10, MQTT-3.3.1-11]
+                self.retained_messages.remove(&topic.original);
+            } else {
+                // replaces any previously retained message [MQTT-3.3.1-7]
+                self.retained_messages.insert(
+                    topic.original.clone(),
+                    (topic.clone(), control_packet.clone()),
+                );
+            }
         }
+
+        // established subscriptions always receive RETAIN=0 [MQTT-3.3.1-9]
+        let mut live_packet = control_packet.clone();
+        set_retained(&mut live_packet.fixed_header, false);
 
         let subscribers = self.subscription_tree.find_subscribers(&topic.path);
 
@@ -247,7 +265,7 @@ impl Control {
             futs.push(self.inform_connection(
                 client_id.clone(),
                 ConnectionMessage::Publish {
-                    packet: control_packet.clone(),
+                    packet: live_packet.clone(),
                     retained_for: None,
                 },
             ));

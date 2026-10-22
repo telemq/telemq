@@ -4,7 +4,7 @@ use super::{
 };
 use crate::control::{ControlMessage, ControlSender};
 use log::{error, info};
-use mqtt_packets::v_3_1_1::{builders::PublishPacketBuilder, topic::Topic, ControlPacket};
+use mqtt_packets::v311::{builders::PublishPacketBuilder, topic::Topic, ControlPacket};
 use std::{io, time::Duration};
 use tokio::{
     select,

@@ -1,13 +1,13 @@
-use crate::v_3_1_1::cp_fixed_header::FixedHeader;
-use crate::v_3_1_1::cp_flag::Flag;
-use crate::v_3_1_1::cp_rem_len::CPRemLen;
-use crate::v_3_1_1::cp_type::CPType;
-use crate::v_3_1_1::ControlPacket;
+use crate::v311::cp_fixed_header::FixedHeader;
+use crate::v311::cp_flag::Flag;
+use crate::v311::cp_rem_len::CPRemLen;
+use crate::v311::cp_type::CPType;
+use crate::v311::ControlPacket;
 
-use crate::v_3_1_1::connack::flags::Flags;
-use crate::v_3_1_1::connack::return_code::ReturnCode;
-use crate::v_3_1_1::connack::variable::Variable as ConnackVariable;
-use crate::v_3_1_1::variable::Variable;
+use crate::v311::connack::flags::Flags;
+use crate::v311::connack::return_code::ReturnCode;
+use crate::v311::connack::variable::Variable as ConnackVariable;
+use crate::v311::variable::Variable;
 
 /// Connack Control Packet builder. Default Control Packet is of type Connack,
 /// with remaining_length 0, with `Flags::SessionNotPresent` flag and

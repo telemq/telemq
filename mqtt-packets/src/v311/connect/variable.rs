@@ -1,5 +1,4 @@
 use bytes::{BufMut, BytesMut};
-use regex::Regex;
 
 use super::{
     connect_flags::{ConnectFlags, ConnectFlagsCodec},
@@ -7,8 +6,8 @@ use super::{
     protocol_level::{ProtocolLevel, ProtocolLevelCodec},
     protocol_name::{ProtocolName, ProtocolNameCodec},
 };
-use crate::v_3_1_1::topic::Topic;
-use crate::v_3_1_1::utils::codec as utils_codec;
+use crate::v311::topic::Topic;
+use crate::v311::utils::codec as utils_codec;
 
 /// Variable header + payload specific for Connect Control Packet.
 #[derive(Debug, PartialEq, Clone)]
@@ -50,7 +49,6 @@ impl VariableCodec {
         self.connect_flags_codec.encode(&item.connect_flags, dst)?;
         self.keep_alive_codec.encode(&item.keep_alive, dst)?;
         {
-            Self::validate_client_id(&item.client_identifier)?;
             let encoded_id = item.client_identifier.as_bytes();
             dst.put_u16(encoded_id.len() as u16);
             dst.put(encoded_id);
@@ -99,39 +97,19 @@ impl VariableCodec {
             None
         };
 
-        let client_identifier_validity = Self::validate_client_id(&client_identifier);
-
-        if client_identifier_validity.is_err() {
-            Err(client_identifier_validity.err().unwrap())
-        } else {
-            Ok(Some(Variable {
-                protocol_name,
-                protocol_level,
-                connect_flags,
-                keep_alive,
-                client_identifier,
-                will_topic,
-                will_message,
-                username,
-                password,
-            }))
-        }
-    }
-
-    fn validate_client_id(client_id: &String) -> ::std::io::Result<()> {
-        lazy_static! {
-            static ref CLIENT_ID_REGEX: Regex = Regex::new(r"^[0-9A-z]{0, 23}$").unwrap();
-        }
-
-        if !CLIENT_ID_REGEX.is_match(client_id) {
-            return Err(::std::io::Error::new(
-                ::std::io::ErrorKind::Other,
-                "Client ID contains non numerical, non alphabetical symbols or has\
-             length more than 23",
-            ));
-        }
-
-        Ok(())
+        // Any UTF-8 client ID is accepted [MQTT-3.1.3-5]; whether a zero-length one is
+        // allowed depends on the clean session flag, which is checked by the broker.
+        Ok(Some(Variable {
+            protocol_name,
+            protocol_level,
+            connect_flags,
+            keep_alive,
+            client_identifier,
+            will_topic,
+            will_message,
+            username,
+            password,
+        }))
     }
 
     /// It encodes will topic and check consistency between Control Packet flags and its payload.

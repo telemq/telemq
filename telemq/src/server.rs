@@ -24,7 +24,7 @@ use crate::{
 
 use ipnet::IpNet;
 use log::{debug, error, info};
-use mqtt_packets::v_3_1_1::ControlPacketCodec;
+use mqtt_packets::v311::ControlPacketCodec;
 use signal_hook::{consts::signal::*, low_level::exit};
 use signal_hook_tokio::{Handle, Signals};
 use tokio::{
@@ -189,7 +189,7 @@ fn on_accept_tcp(stream: TcpStream, addr: SocketAddr, server: &Server) -> io::Re
         return Ok(());
     }
     let connections_number = server.connections_number.clone();
-    if connections_number
+    if let Err(err) = connections_number
         .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |prev_value| {
             if prev_value >= server.config.max_connections {
                 None
@@ -197,8 +197,8 @@ fn on_accept_tcp(stream: TcpStream, addr: SocketAddr, server: &Server) -> io::Re
                 Some(prev_value + 1)
             }
         })
-        .is_err()
     {
+        error!("[Server] unable to count connection number, {err:?}");
         return Ok(());
     }
     let authenticator = server.authenticator.clone();

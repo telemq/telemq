@@ -166,7 +166,7 @@ impl Flag {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::v_3_1_1::cp_type::CPType;
+    use crate::v311::cp_type::CPType;
 
     #[test]
     fn decode_non_reserved() {

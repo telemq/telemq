@@ -1,4 +1,4 @@
-use mqtt_packets::v_3_1_1::topic::Topic;
+use mqtt_packets::v311::topic::Topic;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]

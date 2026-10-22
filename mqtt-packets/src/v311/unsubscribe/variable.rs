@@ -1,8 +1,8 @@
 use bytes::{BufMut, BytesMut};
 
-use crate::v_3_1_1::topic::Subscription;
-use crate::v_3_1_1::utils::codec as utils_codec;
-use crate::v_3_1_1::PacketId;
+use crate::v311::topic::Subscription;
+use crate::v311::utils::codec as utils_codec;
+use crate::v311::PacketId;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Variable {

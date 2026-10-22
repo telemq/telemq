@@ -13,7 +13,7 @@ use plugin_types::authenticator::{LoginResponse as AuthenticatorConnectResponse,
 
 // FIXME: define logging levels
 use log::{error, info};
-use mqtt_packets::v_3_1_1::{
+use mqtt_packets::v311::{
     builders::{
         ConnackBuilder, PingrespPacketBuilder, PubackPacketBuilder, PubcompPacketBuilder,
         PublishPacketBuilder, PubrecPacketBuilder, PubrelPacketBuilder, SubackPacketBuilder,
@@ -37,7 +37,7 @@ use tokio::{
         mpsc::{channel, unbounded_channel, Receiver, Sender, UnboundedReceiver, UnboundedSender},
         RwLock,
     },
-    time::sleep,
+    time::{sleep_until, Instant as TokioInstant},
 };
 use tokio_rustls::server::TlsStream;
 use tokio_util::codec::Framed;
@@ -49,6 +49,14 @@ macro_rules! id {
             .state
             .get_client_id()
             .unwrap_or_else(|_| "UNKNOWN".into())
+    };
+}
+macro_rules! id_ref {
+    ($self: expr) => {
+        $self
+            .state
+            .get_client_id_ref()
+            .unwrap_or_else(|_| "UNKNOWN")
     };
 }
 
@@ -302,11 +310,12 @@ impl Connection {
               }
               Some(_) = self.disconnect.1.recv() => {
                 info!("[Connection Worker@{:?}]: Disconnecting client. Signal", self.addr);
+                self.packets.shutdown().await;
                 return Ok(());
               }
-              _ = sleep(self.inactivity_interval) => {
+              _ = sleep_until(TokioInstant::from_std(self.last_activity + self.inactivity_interval)) => {
+                // the post-loop cleanup closes the connection and publishes the will message
                 info!("[Connection Worker@{:?}]: Disconnecting client due to inactivity", self.addr);
-                disconnect!(self);
                 break;
               }
               res = self.packets.next_packet() => match res {
@@ -322,21 +331,31 @@ impl Connection {
             }
         }
 
+                self.packets.shutdown().await;
+        let client_id = id!(self);
         if self.state.is_connected() {
+            // read before the state is moved into the store below
+            let clean_session = self.state.has_clean_session();
+            let will_packet = self.state.get_will_data().map(|will_data| {
+                PublishPacketBuilder::new()
+                    .with_retained(will_data.3)
+                    .with_qos(&will_data.1)
+                    .with_topic(will_data.0)
+                    .with_payload(will_data.2)
+                    .produce()
+            });
+
+            if !clean_session {
+                self.save_state().await;
+            }
+
             if let Err(err) = self
                 .control_sender
                 .send(ControlMessage::ClientDisconnected {
                     addr: self.addr.clone(),
-                    clean_session: self.state.has_clean_session(),
-                    client_id: id!(self),
-                    will_packet: self.state.get_will_data().map(|will_data| {
-                        PublishPacketBuilder::new()
-                            .with_retained(will_data.3)
-                            .with_qos(&will_data.1)
-                            .with_topic(will_data.0)
-                            .with_payload(will_data.2)
-                            .produce()
-                    }),
+                    clean_session,
+                    client_id: client_id.clone(),
+                    will_packet,
                 })
             {
                 error!(
@@ -348,7 +367,7 @@ impl Connection {
 
         send_stats!(
             StatsMessage::ClientDisconnected {
-                client_id: id!(self),
+                client_id: client_id.clone(),
             },
             self
         );
@@ -412,7 +431,7 @@ impl Connection {
         if !self.state.is_non_connected() {
             error!(
         "[Connection Worker@{:?}]: state is not in non connected state. Unable to connect a client",
-        self.addr.clone()
+        self.addr
       );
             disconnect!(self);
             return;
@@ -430,18 +449,43 @@ impl Connection {
         }
 
         if let Variable::Connect(ref mut variable) = control_packet.variable {
-            let client_id = variable.client_identifier.clone();
             let clean_session = variable.connect_flags.has_clean_session();
+
+            if variable.client_identifier.is_empty() {
+                if !clean_session {
+                    // [MQTT-3.1.3-8]
+                    let connack = ConnackBuilder::new()
+                        .with_return_code(ConnackReturnCode::IdRejected)
+                        .with_session_presented(false)
+                        .build();
+                    // disconnects below whether or not the CONNACK could be sent
+                    let _ = send!(&connack, self);
+                    disconnect!(self);
+                    return;
+                }
+                // [MQTT-3.1.3-6]
+                variable.client_identifier = generate_client_id();
+            }
+
+            // the client is disconnected if no packet is received within one and a half
+            // times its keep alive [MQTT-3.1.2-24]; a zero keep alive falls back to the
+            // configured inactivity interval
+            let keep_alive = variable.keep_alive.as_duration();
+            if !keep_alive.is_zero() {
+                self.inactivity_interval = keep_alive + keep_alive / 2;
+            }
+
+            let client_id = &variable.client_identifier;
 
             let allowed_res = self
                 .authenticator
                 .read()
                 .await
                 .connect(
-                    self.addr,
-                    client_id.clone(),
-                    variable.username.take(),
-                    variable.password.take(),
+                    &self.addr,
+                    client_id,
+                    &variable.username,
+                    &variable.password,
                 )
                 .await;
 
@@ -452,7 +496,10 @@ impl Connection {
                             .with_return_code(ConnackReturnCode::BadUsernameOrPassword)
                             .with_session_presented(false)
                             .build();
-                        send_or_disconnect!(&connack, self);
+                        // the connection is closed after a non-zero return code, even if the
+                        // CONNACK could not be sent [MQTT-3.2.2-5]
+                        let _ = send!(&connack, self);
+                        disconnect!(self);
                         return;
                     }
                     self.acl = Some(response);
@@ -463,7 +510,10 @@ impl Connection {
                         .with_return_code(ConnackReturnCode::Unavailable)
                         .with_session_presented(false)
                         .build();
-                    send_or_disconnect!(&connack, self);
+                    // the connection is closed after a non-zero return code, even if the
+                    // CONNACK could not be sent [MQTT-3.2.2-5]
+                    let _ = send!(&connack, self);
+                    disconnect!(self);
                     return;
                 }
             }
@@ -489,9 +539,9 @@ impl Connection {
                         self.state.into_connected(SessionConnectionProvider {
                             client_id,
                             clean_session: variable.connect_flags.has_clean_session(),
-                            will_topic: variable.will_topic.take(),
-                            will_message: variable.will_message.take(),
-                            will_qos: variable.connect_flags.qos_value().ok(),
+                            will_topic: &mut variable.will_topic,
+                            will_message: &mut variable.will_message.take(),
+                            will_qos: &mut variable.connect_flags.qos_value().ok(),
                         });
                         let connack = ConnackBuilder::new()
                             .with_return_code(ConnackReturnCode::Accepted)
@@ -508,9 +558,9 @@ impl Connection {
                     self.state.into_connected(SessionConnectionProvider {
                         client_id,
                         clean_session: variable.connect_flags.has_clean_session(),
-                        will_topic: variable.will_topic.take(),
-                        will_message: variable.will_message.take(),
-                        will_qos: variable.connect_flags.qos_value().ok(),
+                        will_topic: &mut variable.will_topic,
+                        will_message: &mut variable.will_message,
+                        will_qos: &mut variable.connect_flags.qos_value().ok(),
                     });
                     let connack = ConnackBuilder::new()
                         .with_return_code(ConnackReturnCode::Accepted)
@@ -526,9 +576,9 @@ impl Connection {
                     self.state.into_connected(SessionConnectionProvider {
                         client_id,
                         clean_session,
-                        will_topic: variable.will_topic.take(),
-                        will_message: variable.will_message.take(),
-                        will_qos: variable.connect_flags.qos_value().ok(),
+                        will_topic: &mut variable.will_topic,
+                        will_message: &mut variable.will_message,
+                        will_qos: &mut variable.connect_flags.qos_value().ok(),
                     });
                     let connack = ConnackBuilder::new()
                         .with_return_code(ConnackReturnCode::Accepted)
@@ -619,7 +669,9 @@ impl Connection {
 
     async fn disconnect(&mut self) {
         let client_id = id!(self);
-        if let Ok(connected_state) = self.state.into_closed() {
+        // read before the state is closed, a closed state always reports a clean session
+        let clean_session = self.state.has_clean_session();
+        if self.state.is_connected() {
             send_stats!(
                 StatsMessage::ClientDisconnected {
                     client_id: client_id.clone()
@@ -627,6 +679,33 @@ impl Connection {
                 self
             );
 
+            if clean_session {
+                // [MQTT-3.1.2-6]
+                let _ = self.state.into_closed();
+            } else {
+                self.save_state().await;
+            }
+        }
+
+        self.disconnect.0.send(()).await.expect(&format!(
+            "[Connection Worker@{:?}]: Unable to disconnect a client",
+            self.addr
+        ));
+
+        send_control!(
+            ControlMessage::ClientDisconnected {
+                addr: self.addr.clone(),
+                clean_session,
+                client_id: client_id.clone(),
+                will_packet: None,
+            },
+            self
+        );
+    }
+
+    // moves a connected session into the Session State Store
+    async fn save_state(&mut self) {
+        if let Ok(connected_state) = self.state.into_closed() {
             if let Err(err) = self
                 .state_store
                 .write()
@@ -640,27 +719,13 @@ impl Connection {
                 );
             }
         }
-
-        self.disconnect.0.send(()).await.expect(&format!(
-            "[Connection Worker@{:?}]: Unable to disconnect a client",
-            self.addr
-        ));
-
-        send_control!(
-            ControlMessage::ClientDisconnected {
-                addr: self.addr.clone(),
-                clean_session: self.state.has_clean_session(),
-                client_id: client_id.clone(),
-                will_packet: None,
-            },
-            self
-        );
     }
 
     async fn shut_down(&mut self) {
         if let Ok(connected_state) = self.state.into_closed() {
             let client_id = connected_state.client_id.clone();
-            if !connected_state.clean_session {
+            let clean_session = connected_state.clean_session;
+            if !clean_session {
                 if let Err(err) = self
                     .state_store
                     .write()
@@ -677,7 +742,7 @@ impl Connection {
 
             let disconnect_message = ControlMessage::ClientDisconnected {
                 addr: self.addr.clone(),
-                clean_session: self.state.has_clean_session(),
+                clean_session,
                 client_id,
                 will_packet: None,
             };
@@ -902,7 +967,7 @@ impl Connection {
             &control_packet.variable,
             get_qos_level(&control_packet.fixed_header),
         ) {
-            (Variable::Publish(ref variable), Ok(qos)) => (variable.topic_name.clone(), qos),
+            (Variable::Publish(ref variable), Ok(qos)) => (&variable.topic_name, qos),
             _ => {
                 error!("Malformed publish packet");
                 return;
@@ -936,7 +1001,7 @@ impl Connection {
         let new_packet_id = if qos_to_use == &QoS::One || qos_to_use == &QoS::Two {
             match self
                 .state
-                .create_send_transaction_from_packet(&packet_to_send.clone())
+                .create_send_transaction_from_packet(&packet_to_send)
             {
                 Ok(packet_id) => packet_id,
                 Err(err) => {
@@ -1121,4 +1186,22 @@ impl Connection {
             None => true,
         }
     }
+}
+
+// Generates a broker-unique client ID for clients that connect with a zero-length one.
+fn generate_client_id() -> String {
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    let started_at = time::SystemTime::now()
+        .duration_since(time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+
+    format!(
+        "telemq-{:x}-{}",
+        started_at,
+        COUNTER.fetch_add(1, Ordering::Relaxed)
+    )
 }

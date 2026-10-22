@@ -10,7 +10,7 @@ license = "MIT/Apache-2.0"
 [dependencies]
 serde = "1"
 
-mqtt-packets = { path = "../mqtt-packets", version = "0.1.0", features = ["v_3_1_1"] }
+mqtt-packets = { path = "../mqtt-packets", version = "0.1.0", features = ["v311"] }
 
 [features]
 authenticator = []

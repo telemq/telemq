@@ -14,7 +14,7 @@
 use std::collections::{HashMap, VecDeque};
 use std::mem::replace as mem_replace;
 
-use mqtt_packets::v_3_1_1::{
+use mqtt_packets::v311::{
     publish::fixed_header::{get_qos_level, set_dup},
     subscribe::topic_subscription::TopicSubscription,
     topic::{Subscription, Topic},
@@ -108,6 +108,18 @@ impl SessionState {
         }
     }
 
+    pub fn get_client_id_ref(&self) -> SessionResult<&str> {
+        match self {
+            SessionState::Connected(SessionConnectedState { client_id, .. }) => {
+                return Ok(client_id)
+            }
+            _ => Err(SessionError::new(
+                SessionErrorKind::WrongState,
+                "Unable to get a client id for a client which is not connected",
+            )),
+        }
+    }
+
     pub fn has_clean_session(&self) -> bool {
         match self {
             SessionState::Connected(SessionConnectedState { clean_session, .. }) => {
@@ -118,20 +130,20 @@ impl SessionState {
     }
 
     pub fn connected(
-        SessionConnectionProvider {
+         SessionConnectionProvider {
             client_id,
             clean_session,
             will_topic,
             will_message,
             will_qos,
-        }: SessionConnectionProvider,
+        }:  SessionConnectionProvider,
     ) -> SessionState {
         SessionState::Connected(SessionConnectedState::new(
-            client_id,
+            client_id.clone(),
             clean_session,
-            will_topic,
-            will_message,
-            will_qos,
+            will_topic.take(),
+            will_message.take(),
+            will_qos.take(),
         ))
     }
 
@@ -222,9 +234,10 @@ impl SessionState {
         VecDeque::new()
     }
 
-    // generates a unique packet id for a send transaction
+    // generates a unique packet id for a send transaction; 0 is not a valid
+    // packet id [MQTT-2.3.1-1], so the search starts from 1
     fn generate_packet_id(&self) -> SessionResult<PacketId> {
-        let mut packet_id = vec![0u8, 0u8];
+        let mut packet_id = vec![0u8, 1u8];
 
         loop {
             if !self.check_packet_id(&packet_id) {
@@ -261,6 +274,9 @@ impl SessionState {
         mut control_packet: ControlPacket,
     ) -> SessionResult<()> {
         set_dup(&mut control_packet.fixed_header, true);
+        // the stored copy is what gets re-sent, so it has to carry the packet id
+        // generated for this session rather than the one chosen by the publisher
+        getters_setters::set_packet_id(&mut control_packet.variable, packet_id.clone());
         match self {
             SessionState::NonConnected => Err(SessionError::new(
                 SessionErrorKind::WrongState,
